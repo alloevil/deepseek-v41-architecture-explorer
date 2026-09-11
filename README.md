@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="./assets/readme/hero.svg" width="100%"
+       alt="DeepSeek-V4.1-Flash vs. the 2017 Transformer: a 40-layer CED stack with 20 encoder layers above 20 decoder layers, decoder global KV projected from H20, and a log-scale KV cache cost comparison of 890 bytes per token in FP4 against the 2017 baseline of about 36 kilobytes">
+</p>
+
 # DeepSeek-V4.1-Flash vs. the original Transformer — interactive 3D architecture viewer
 
 An interactive, zoomable 3D comparison of two architectures: the **2017 Transformer**

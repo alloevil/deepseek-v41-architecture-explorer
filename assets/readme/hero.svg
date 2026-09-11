@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="heroTitle heroDesc">
+  <title id="heroTitle">DeepSeek-V4.1-Flash vs. the 2017 Transformer</title>
+  <desc id="heroDesc">An interactive 3D architecture viewer. Right: the DeepSeek-V4.1-Flash 40-layer CED stack, 20 causal encoder layers above 20 decoder layers, separated by a dashed boundary; the decoder global KV is projected from H20. Left: a log-scale comparison of KV cache cost per token, 890 bytes in FP4 for DeepSeek-V4.1-Flash against the 2017 Transformer naive baseline of about 36 kilobytes.</desc>
+
+  <rect width="1200" height="420" rx="22" fill="#0a0f1c"/>
+
+  <g id="title-block">
+    <text x="64" y="58" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="18" letter-spacing="2.4" fill="#8d98ad">INTERACTIVE 3D ARCHITECTURE VIEWER</text>
+    <text x="64" y="128" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="700" fill="#e8ecf4">DeepSeek-V4.1-Flash</text>
+    <text x="64" y="172" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif" font-size="29" fill="#8d98ad">vs. the 2017 Transformer</text>
+    <text x="64" y="208" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif" font-size="20" fill="#8d98ad">Built from the papers themselves — every</text>
+    <text x="64" y="232" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif" font-size="20" fill="#8d98ad">number is traceable to the technical report.</text>
+    <text x="64" y="270" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="19" fill="#e8ecf4">552B backbone · 8B prefill / 16B decode</text>
+  </g>
+
+  <g id="kv-cost">
+    <text x="64" y="302" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="20" letter-spacing="1" fill="#8d98ad">KV CACHE PER TOKEN — LOG SCALE</text>
+    <rect x="64" y="312" width="62" height="14" rx="4" fill="#18b8a8"/>
+    <text x="146" y="324" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif" font-size="19" fill="#e8ecf4">DeepSeek-V4.1-Flash<tspan fill="#18b8a8"> · 890 B/token</tspan><tspan fill="#8d98ad"> · FP4</tspan></text>
+    <rect x="64" y="340" width="260" height="14" rx="4" fill="#9a6bff"/>
+    <text x="344" y="352" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif" font-size="19" fill="#8d98ad">2017 baseline · <tspan fill="#9a6bff">≈36 KB</tspan></text>
+    <text x="64" y="378" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif" font-size="18" fill="#8d98ad">global KV 890 B/token: 1/4 of V4-Flash, 1/437 of V1</text>
+    <text x="64" y="398" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif" font-size="18" fill="#8d98ad">36 KB baseline: naive, base model — viewer arithmetic</text>
+  </g>
+
+  <g id="ced-stack">
+    <text x="680" y="36" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="18" letter-spacing="1.4" fill="#8d98ad">40 LAYERS · <tspan fill="#e8ecf4">CED</tspan></text>
+    <rect x="680" y="58" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="65" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="72" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="79" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="86" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="93" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="100" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="107" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="114" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="121" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="128" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="135" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="142" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="149" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="156" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="163" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="170" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="177" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="184" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="191" width="120" height="5.2" rx="1.6" fill="#18b8a8" opacity="0.5"/>
+    <rect x="680" y="204" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="211" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="218" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="225" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="232" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="239" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="246" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="253" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="260" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="267" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="274" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="281" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="288" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="295" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="302" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="309" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="316" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="323" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="330" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <rect x="680" y="337" width="120" height="5.2" rx="1.6" fill="#18b8a8"/>
+    <line x1="680" y1="200" x2="1136" y2="200" stroke="#18b8a8" stroke-width="1" stroke-dasharray="7 7" opacity="0.4"/>
+  </g>
+
+  <g id="baseline-tower">
+    <rect x="580" y="260.0" width="56" height="5.2" rx="1.6" fill="#9a6bff"/>
+    <rect x="580" y="267.0" width="56" height="5.2" rx="1.6" fill="#9a6bff"/>
+    <rect x="580" y="274.0" width="56" height="5.2" rx="1.6" fill="#9a6bff"/>
+    <rect x="580" y="281.0" width="56" height="5.2" rx="1.6" fill="#9a6bff"/>
+    <rect x="580" y="288.0" width="56" height="5.2" rx="1.6" fill="#9a6bff"/>
+    <rect x="580" y="295.0" width="56" height="5.2" rx="1.6" fill="#9a6bff"/>
+    <rect x="580" y="302.0" width="56" height="5.2" rx="1.6" fill="#9a6bff"/>
+    <rect x="580" y="309.0" width="56" height="5.2" rx="1.6" fill="#9a6bff"/>
+    <rect x="580" y="316.0" width="56" height="5.2" rx="1.6" fill="#9a6bff"/>
+    <rect x="580" y="323.0" width="56" height="5.2" rx="1.6" fill="#9a6bff"/>
+    <rect x="580" y="330.0" width="56" height="5.2" rx="1.6" fill="#9a6bff"/>
+    <rect x="580" y="337.0" width="56" height="5.2" rx="1.6" fill="#9a6bff"/>
+    <text x="608" y="222" text-anchor="middle" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="18" fill="#8d98ad">2017</text>
+    <text x="608" y="246" text-anchor="middle" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="18" fill="#8d98ad">6+6 layers</text>
+  </g>
+
+  <g id="ced-notes">
+    <text x="826" y="133" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#e8ecf4">20 encoder</text>
+    <text x="826" y="232" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif" font-size="19" fill="#18b8a8">decoder global KV</text>
+    <text x="826" y="258" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif" font-size="19" fill="#e8ecf4">projected from H<tspan font-size="16" dy="4">20</tspan></text>
+    <text x="826" y="290" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#e8ecf4">20 decoder</text>
+    <text x="826" y="316" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif" font-size="18" fill="#8d98ad">prefill runs half the stack</text>
+  </g>
+
+  <g id="spec-footer">
+    <text x="680" y="368" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="18" fill="#8d98ad">SWA128 · Top-512</text>
+    <text x="680" y="388" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="18" fill="#8d98ad">MoE 1 shared + 384 routed, 6 active</text>
+    <text x="680" y="408" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="18" fill="#8d98ad">mHC4 streams · Engram196B @ L1/L14</text>
+  </g>
+</svg>
