@@ -1,0 +1,505 @@
+{
+  "$comment": "Receipts for every number the viewer displays. Each entry carries the verbatim sentence from the technical report it came from; verify.py enforces that index.html still matches. Numbers the report does not publish are listed under removed_claims and must stay out.",
+  "project": "deepseek-v41-architecture-explorer",
+  "checked_on": "2026-09-11",
+  "source": {
+    "title": "DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression",
+    "publisher": "DeepSeek-AI",
+    "date": "2026-09-10",
+    "pages": 51,
+    "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf",
+    "sha256": "ba68e2e40408125ae6d2f63a9a241b61c73910691c74ec1a2a7023c851eac08d",
+    "model_card": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash",
+    "how_to_recheck": "curl -sL -o /tmp/ds41.pdf '<url>' && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -i '<quote from this file>'"
+  },
+  "baseline_source": {
+    "title": "Attention Is All You Need",
+    "url": "https://arxiv.org/abs/1706.03762",
+    "note": "Left tower only: 6+6 layers, d_model 512, 8 heads, d_ff 2048, 65M base / 213M big. The 36 KB/token baseline and the ~41x gap are this project's own arithmetic, not paper numbers, and the UI labels them as such."
+  },
+  "claims": [
+    {
+      "id": "arch.ced",
+      "claim": "Decoder global KV is projected from the final encoder hidden states (H_{L/2}).",
+      "source": {
+        "section": "2.1 Overview / eq. (1)",
+        "quote": "We adopt a Causal Encoder-Decoder (CED) architecture, in which decoder global KV is projected from the final encoder hidden states."
+      },
+      "viewer": {
+        "must_contain": [
+          "解码器全局 KV 由编码器最后隐状态投影"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "arch.ced_half",
+      "claim": "CED computes only the first half of the layers during prefill.",
+      "source": {
+        "section": "2.2 CED",
+        "quote": "This design allows CED to compute only the first half of the layers during the prefill phase"
+      },
+      "viewer": {
+        "must_contain": [
+          "prefill 只跑一半栈"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "arch.params",
+      "claim": "552B backbone parameters.",
+      "source": {
+        "section": "2.1 Overview",
+        "quote": "DeepSeek-V4.1-Flash has 552B backbone parameters"
+      },
+      "viewer": {
+        "must_contain": [
+          "552B"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "arch.activation",
+      "claim": "8B activated per token in prefill, 16B in decode.",
+      "source": {
+        "section": "2.1 Overview",
+        "quote": "This design enables the model to activate 8B parameters per token during prefill and 16B during decode"
+      },
+      "viewer": {
+        "must_contain": [
+          "prefill 激活 8B / 解码 16B"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "kv.bytes",
+      "claim": "Global KV cache = 890 bytes per token in FP4, ~1/4 of V4-Flash.",
+      "source": {
+        "section": "1 Introduction / 2.4.4",
+        "quote": "reduce its global KV cache footprint (always in HBM) to 890 bytes per token, roughly 1/4 of the corresponding footprint of DeepSeek-V4-Flash"
+      },
+      "viewer": {
+        "must_contain": [
+          "890 B/token",
+          "890",
+          "1/4"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "kv.persistent",
+      "claim": "Persistent KV cache ~1/8 of V4-Flash via SWA Bounded Replay.",
+      "source": {
+        "section": "3.2.2 SWA Bounded Replay",
+        "quote": "reduces its persistent KV cache footprint (always on SSD or in host memory) to roughly 1/8 of that of DeepSeek-V4-Flash"
+      },
+      "viewer": {
+        "must_contain": [
+          "1/8"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "kv.437",
+      "claim": "~437x smaller per-token global KV than DeepSeek-V1.",
+      "source": {
+        "section": "Figure 1 caption",
+        "quote": "achieves approximately 4-fold and 437-fold reductions in per-token global KV cache size relative to DeepSeek-V4-Flash and DeepSeek-V1"
+      },
+      "viewer": {
+        "must_contain": [
+          "1/437"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "kv.fp4",
+      "claim": "MXFP4 E2M1 with one E4M3 scale per 16 channels.",
+      "source": {
+        "section": "2.4.4 FP4 Main KV Cache",
+        "quote": "we select E2M1 with one E4M3 scale per 16 channels"
+      },
+      "viewer": {
+        "must_contain": [
+          "E2M1",
+          "每 16 通道一个 E4M3 scale"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "kv.quant_after_rope",
+      "claim": "The cache is quantized after RoPE.",
+      "source": {
+        "section": "2.4.4 FP4 Main KV Cache",
+        "quote": "We quantize the cache after RoPE"
+      },
+      "viewer": {
+        "must_contain": [
+          "RoPE 之后量化"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "swa.window",
+      "claim": "SWA window n_win = 128 in every layer.",
+      "source": {
+        "section": "4.2.1 Model Setups",
+        "quote": "the window size 𝑛win is set to 128"
+      },
+      "viewer": {
+        "must_contain": [
+          "128 token 滑动窗口"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "swa.first_two",
+      "claim": "The first two layers use pure SWA.",
+      "source": {
+        "section": "4.2.1 Model Setups",
+        "quote": "For the first two layers, we use pure sliding window attention."
+      },
+      "viewer": {
+        "must_contain": [
+          "纯 SWA"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "csa2.encoder",
+      "claim": "Encoder CSA2: 3 groups of 6, first layer Full, next 5 Reuse (m=2).",
+      "source": {
+        "section": "4.2.1 Model Setups",
+        "quote": "These layers are divided into three identically configured groups of six layers. In each group, the first layer operates in Full Mode, and the remaining five layers operate in Reuse Mode."
+      },
+      "viewer": {
+        "must_contain": [
+          "三组各 6 层"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "csa2.decoder",
+      "claim": "Decoder CSA2: 5 groups of 4, group 1 is Full + 3 Reuse (m=1).",
+      "source": {
+        "section": "4.2.1 Model Setups",
+        "quote": "The 20 decoder layers use CSA2 with a compression rate of 𝑚 = 1. These layers are divided into five groups of four layers. In the first group, the first layer operates in Full Mode, and the remaining three layers operate in Reuse Mode."
+      },
+      "viewer": {
+        "must_contain": [
+          "五组各 4 层",
+          "第 1 组 Full + 3 Reuse"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "csa2.decoder_reindex",
+      "claim": "Decoder groups 2-5 start with Reindex Mode.",
+      "source": {
+        "section": "4.2.1 Model Setups",
+        "quote": "The remaining four groups share the same configuration: the first layer operates in Reindex Mode"
+      },
+      "viewer": {
+        "must_contain": [
+          "Reindex"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "indexer.topk",
+      "claim": "Sparse attention reads Top-512 main KV entries per query.",
+      "source": {
+        "section": "4.2.1 Model Setups",
+        "quote": "the number of KV entries selected for sparse attention (i.e., attention top-k) to 512"
+      },
+      "viewer": {
+        "must_contain": [
+          "Top-512"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "indexer.pool",
+      "claim": "Candidate pool: 2048 blocks x 8 positions = 16,384 positions.",
+      "source": {
+        "section": "2.3.2 Hierarchical Sparse Indexer",
+        "quote": "selecting 2,048 blocks with 8 positions each yields 16,384 candidate positions"
+      },
+      "viewer": {
+        "must_contain": [
+          "2048 块 × 8"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "attn.heads",
+      "claim": "64 query heads, head dim 512, query compression dim 1280.",
+      "source": {
+        "section": "4.2.1 Model Setups",
+        "quote": "We set the number of query heads to 64, the head dimension to 512, and the query compression dimension to 1280."
+      },
+      "viewer": {
+        "must_contain": [
+          "q 压缩 1280"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "indexer.heads",
+      "claim": "Indexer: 32 query heads, head dim 128.",
+      "source": {
+        "section": "4.2.1 Model Setups",
+        "quote": "we set the number of indexer query heads to 32, the indexer head dimension to 128"
+      },
+      "viewer": {
+        "must_contain": [
+          "索引器 32 头、dim 128"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "moe.experts",
+      "claim": "MoE: 1 shared + 384 routed experts, 6 active, expert dim 2304.",
+      "source": {
+        "section": "4.2.1 Model Setups",
+        "quote": "Each MoE layer consists of 1 shared expert and 384 routed experts, where the intermediate hidden dimension of each expert is 2304. Among the routed experts, 6 experts will be activated for each token."
+      },
+      "viewer": {
+        "must_contain": [
+          "1 共享 + 384 路由专家"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "mhc.expansion",
+      "claim": "Single-Pass mHC: expansion factor 4, 20 Sinkhorn-Knopp iterations.",
+      "source": {
+        "section": "4.2.1 Model Setups",
+        "quote": "As for mHC, the expansion factor is set to 4, and the number of Sinkhorn-Knopp iterations is set to 20."
+      },
+      "viewer": {
+        "must_contain": [
+          "4 条并行残差流",
+          "20 次 Sinkhorn 迭代"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "engram.params",
+      "claim": "Engram: 196B parameters in two modules.",
+      "source": {
+        "section": "2.4.2 Engram",
+        "quote": "We allocate 196B Engram parameters evenly across two modules."
+      },
+      "viewer": {
+        "must_contain": [
+          "196B"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "engram.layers",
+      "claim": "Engram modules sit at layers 1 and 14 (zero-indexed).",
+      "source": {
+        "section": "2.4.2 Engram",
+        "quote": "The modules are placed at layers 1 and 14 (zero-indexed)"
+      },
+      "viewer": {
+        "must_contain": [
+          "L1 与 L14"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "dspark.blocks",
+      "claim": "DSpark: 3 Transformer blocks, 5 draft positions per forward pass.",
+      "source": {
+        "section": "2.4.3 DSpark",
+        "quote": "The drafter comprises three Transformer blocks with a sliding attention window of 128 tokens. A single forward pass through these blocks computes base logits for five draft positions in parallel"
+      },
+      "viewer": {
+        "must_contain": [
+          "3 个 Transformer block",
+          "5 个 token"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "vit.config",
+      "claim": "DeepSeek-ViT: 32 layers, hidden 1024, 16 heads, patch 14.",
+      "source": {
+        "section": "4.2.1 Model Setups",
+        "quote": "we set its number of layers to 32, the hidden dimension to 1024, the number of attention heads to 16, and the image patch size to 14"
+      },
+      "viewer": {
+        "must_contain": [
+          "32 层、hidden 1024、16 头、patch 14"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "img.bound",
+      "claim": "Images up to ~1344x1344 px via 3x3 pixel-unshuffle.",
+      "source": {
+        "section": "2.2 Vision encoder",
+        "quote": "supporting input resolutions up to approximately 1344 × 1344 pixels"
+      },
+      "viewer": {
+        "must_contain": [
+          "1344×1344"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "effort.range",
+      "claim": "Reasoning effort is continuously controllable, integer 1-100.",
+      "source": {
+        "section": "5.1.4 Controllable Reasoning Effort in RL",
+        "quote": "Reasoning Effort:           {effort} (range 1–100; higher values request more"
+      },
+      "viewer": {
+        "must_contain": [
+          "连续可调(整数 1–100)"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "train.tokens",
+      "claim": "Trained on a multimodal corpus of 45T tokens.",
+      "source": {
+        "section": "1 Introduction",
+        "quote": "multimodal corpus comprising 45T tokens"
+      },
+      "viewer": {
+        "must_contain": [
+          "45T tokens"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "train.64k",
+      "claim": "Sparse attention trained from scratch at 64K, no dense warmup.",
+      "source": {
+        "section": "4.2.2 Training Setups",
+        "quote": "Sparse attention is trained from scratch at a sequence length of 64K, without any dense attention warmup stages."
+      },
+      "viewer": {
+        "must_contain": [
+          "64K 起稀疏从零训练"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "train.1m",
+      "claim": "Sequence length extended to 1M at 34T tokens.",
+      "source": {
+        "section": "4.2.2 Training Setups",
+        "quote": "extend the sequence length to 1M at 34T tokens"
+      },
+      "viewer": {
+        "must_contain": [
+          "34T token 时扩到 1M"
+        ],
+        "must_not_contain": []
+      }
+    },
+    {
+      "id": "removed.fabrications",
+      "claim": "Numbers the report does not publish, which an earlier revision asserted; they must stay out.",
+      "source": {
+        "section": "absence check across the whole report",
+        "quote": "n/a - these strings do not occur anywhere in DeepSeek_V41_Tech_Report.pdf"
+      },
+      "viewer": {
+        "must_contain": [],
+        "must_not_contain": [
+          "160,000",
+          "YaRN ×16",
+          "128 路由专家(激活 3)",
+          "LM head(BF16)",
+          "Pre-norm 变体只在脚注里提了一句",
+          "读 L37–39",
+          "单次请求图片数量不限",
+          "40 层里 33 层是 Reuse"
+        ]
+      }
+    }
+  ],
+  "removed_claims": [
+    {
+      "id": "theta",
+      "asserted": "compressed main KV rotates at theta = 160,000",
+      "status": "removed - the report publishes no RoPE theta",
+      "checked": "grep -i '160000\\|160,000' over the full report text: no match"
+    },
+    {
+      "id": "yarn",
+      "asserted": "YaRN x16 extends the 64K window to 1,048,576",
+      "status": "removed - YaRN is never mentioned; the report extends to 1M at 34T tokens",
+      "checked": "grep -i 'yarn' over the full report text: no match"
+    },
+    {
+      "id": "dspark_experts",
+      "asserted": "DSpark drafter has 128 routed experts each (3 active)",
+      "status": "removed - 2.4.3 specifies only the three blocks, the 128-token window and the five draft positions",
+      "checked": "read 2.4.3 in full; 'routed experts' occurs only in the 4.2.1 MoE setup"
+    },
+    {
+      "id": "lm_head_precision",
+      "asserted": "LM head is BF16",
+      "status": "removed - BF16 appears only in the FLOP-accounting note",
+      "checked": "grep -i 'bf16\\|bfloat' over the full report text"
+    },
+    {
+      "id": "prenorm_footnote",
+      "asserted": "pre-norm variant mentioned in a footnote",
+      "status": "removed - the paper has no pre-norm discussion; the viewer now states post-norm as Figure 1 shows",
+      "checked": "read all footnotes in arXiv 1706.03762"
+    },
+    {
+      "id": "dspark_taps",
+      "asserted": "DSpark taps layers 37-39",
+      "status": "removed - the report never says which layers feed the drafter",
+      "checked": "read 2.4.3; no layer-tap statement"
+    },
+    {
+      "id": "image_cap",
+      "asserted": "no cap on images/prompt",
+      "status": "removed - the report bounds image resolution at ~1344x1344 and context at 1M tokens",
+      "checked": "2.2 vision encoder"
+    },
+    {
+      "id": "reuse_count",
+      "asserted": "33 of the 40 layers are Reuse",
+      "status": "corrected to 30 (15 encoder + 15 decoder); the other 8 are 2 SWA-only + 4 Full + 4 Reindex",
+      "checked": "4.2.1 group schedule, counted per group"
+    }
+  ]
+}
