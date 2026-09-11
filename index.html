@@ -240,8 +240,8 @@
         data-en="<b>Right brackets = reuse groups</b>: only the group's first layer materialises KV, the rest reuse it; <b>green strip on each block = MoE in every layer</b> (the cube field is the same 384 experts, magnified)">…</li>
     <li data-zh="<b>想看懂机制</b>:点任意主干层 → 面板显示<b>该层内部数据流</b>(哪些是算的、哪些是复用、哪些写缓存);按 <b>▶ 走一遍</b> 跟随一个 token 从嵌入走到输出"
         data-en="<b>To understand the mechanism</b>: click any backbone layer to see <b>that layer's internal dataflow</b> (what is computed, reused, or written to cache); press <b>Walk</b> to follow one token from embedding to output">…</li>
-    <li data-zh="<b>塔外挂件 = 主干之外的模块</b>:<span class='k' style='background:#2f8fd0'></span>ViT(图像输入通路)、<span class='k' style='background:#ffcf40'></span>Engram(记忆表)、<span class='k' style='background:#ff8d5c'></span>DSpark(投机解码,读 L37–39)。点击任意模块看两塔同一概念对照;↑↓ 遍历 · Esc 清除 · 空格 巡游"
-        data-en="<b>Side modules = outside the backbone</b>: <span class='k' style='background:#2f8fd0'></span>ViT (image path), <span class='k' style='background:#ffcf40'></span>Engram (memory tables), <span class='k' style='background:#ff8d5c'></span>DSpark (speculative decode, taps L37–39). Click any block for a side-by-side comparison; ↑↓ walk · Esc clear · Space tour">…</li>
+    <li data-zh="<b>塔外挂件 = 主干之外的模块</b>:<span class='k' style='background:#2f8fd0'></span>ViT(图像输入通路)、<span class='k' style='background:#ffcf40'></span>Engram(记忆表)、<span class='k' style='background:#ff8d5c'></span>DSpark(投机解码,独立草稿头)。点击任意模块看两塔同一概念对照;↑↓ 遍历 · Esc 清除 · 空格 巡游"
+        data-en="<b>Side modules = outside the backbone</b>: <span class='k' style='background:#2f8fd0'></span>ViT (image path), <span class='k' style='background:#ffcf40'></span>Engram (memory tables), <span class='k' style='background:#ff8d5c'></span>DSpark (speculative decode, separate drafter). Click any block for a side-by-side comparison; ↑↓ walk · Esc clear · Space tour">…</li>
   </ul>
   <button id="howto-close" data-zh="知道了" data-en="Got it">知道了</button>
 </div>
@@ -304,18 +304,18 @@ const CONCEPTS = {
     right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: 'native multimodal input path',
       facts: ['Text embedding + <b>DeepSeek-ViT</b>: 32 layers, hidden 1024, 16 heads, patch 14, <b>2D-RoPE</b>, linear patch embed (Muon-friendly)',
               '<b>3×3 pixel-unshuffle</b> cuts visual tokens 9× → MLP projector (2 layers, hidden 5120) into the text stream',
-              'Visual embeddings enter as <code>inputs_embeds</code> before the mHC stream expansion; raw ids kept for modality routing bias',
-              'No cap on images/prompt; up to ~1344×1344 px per image'] } },
+              'Visual embeddings are inserted at the corresponding image-token positions in the input embedding sequence, before the mHC stream expansion; raw ids kept for modality routing bias',
+              'Varying image resolutions supported up to ~1344×1344 px (3×3 pixel-unshuffle keeps the visual token count down); context up to 1M tokens'] } },
 
   posenc: {
     title: 'Positional Information',
     left: { title: 'Transformer (2017)', sub: 'absolute sinusoidal',
       facts: ['sin/cos of different frequencies added once at the input',
               'The paper showed learned PE ≈ sinusoidal; extrapolation to longer sequences untested'] },
-    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: 'RoPE everywhere, YaRN to 1M',
+    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: 'RoPE everywhere; sparse-from-scratch at 64K',
       facts: ['<b>RoPE</b> in all attention; 2D-RoPE in the vision tower',
-              'Compressed main KV rotates at its own theta = <b>160,000</b> (one latent stands for several tokens)',
-              '<b>YaRN ×16</b> extends the 64K training window to <b>1,048,576</b> tokens',
+              'Main KV latent (512 channels) is quantized <b>after RoPE</b>; RoPE preserves its L2 norm, which is why FP4 needs no global scale',
+              'The report describes no YaRN-style extension; the sequence length is extended to 1M at 34T tokens',
               'Trained sparse-from-scratch at 64K, no dense warmup; extended to 1M at 34T tokens'] } },
 
   attention: {
@@ -357,7 +357,7 @@ const CONCEPTS = {
     title: 'Residual Stream & Norm',
     left: { title: 'Transformer (2017)', sub: 'Add & Norm · LayerNorm',
       facts: ['One residual stream: x + Sublayer(x), then LayerNorm',
-              'Pre-norm variant mentioned only in a footnote'] },
+              'Post-norm: LayerNorm after each sublayer, as in the paper\'s Figure 1'] },
     right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: 'Single-Pass mHC · n = 4 streams',
       facts: ['Residual carried as <b>4 parallel copies</b>; per-token coefficients A, B, C predicted from the stream itself',
               'Combine matrix made doubly stochastic via <b>20 Sinkhorn iterations</b>',
@@ -381,7 +381,7 @@ const CONCEPTS = {
     title: 'KV Cache',
     left: { title: 'Transformer (2017)', sub: 'not addressed in the paper',
       facts: ['The paper predates KV-caching practice; a naive deployment caches K and V for <b>every head of every layer</b>',
-              'base model at BF16 ≈ <b>36 KB/token</b> (18 attention sites × 2 KB)',
+              'base model at BF16 ≈ <b>36 KB/token</b> (18 attention sites × 2 KB) — the viewer\'s own arithmetic, not a paper number',
               'Grows linearly with layers × heads — exactly the cost V4.1 attacks'] },
     right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: '890 bytes/token · FP4',
       facts: ['Cross-layer reuse: only Full/Reindex layers materialize main KV; indexer K shared alongside it',
@@ -393,12 +393,13 @@ const CONCEPTS = {
   output: {
     title: 'Output & Decoding',
     left: { title: 'Transformer (2017)', sub: 'Linear + Softmax',
-      facts: ['Final linear projection to vocab + softmax; greedy or beam decode',
+      facts: ['Final linear projection to vocab + softmax; the paper reports beam search (beam size 4, α = 0.6)',
               'Fully autoregressive, one token per forward pass'] },
-    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: 'LM head (BF16) + DSpark',
-      facts: ['<b>DSpark drafter:</b> 3 Transformer blocks (SWA window 128), 128 routed experts each (3 active) — one pass drafts a <b>5-token block</b> semi-autoregressively',
+    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: 'LM head + DSpark',
+      facts: ['<b>DSpark drafter:</b> 3 Transformer blocks (SWA window 128) — one pass drafts a <b>5-token block</b> semi-autoregressively; the report does not publish the drafter\'s expert configuration',
               'Markov head models dependencies among draft tokens; confidence head predicts per-position acceptance → prefix-survival estimates',
               'Scheduler picks verification length from profiled throughput curves under current load',
+              'Reasoning effort is <b>continuously controllable (integer 1–100)</b>, trading inference cost for accuracy',
               'Unlike V3\'s MTP: trained in a dedicated post-pretraining stage with frozen backbone, then kept aligned during post-training without back-prop into the backbone'] } },
 };
 
@@ -428,17 +429,17 @@ const CONCEPTS_ZH = {
     right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: '原生多模态输入通路',
       facts: ['文本嵌入 + <b>DeepSeek-ViT</b>:32 层、hidden 1024、16 头、patch 14、<b>2D-RoPE</b>,线性 patch 嵌入(适配 Muon)',
               '<b>3×3 pixel-unshuffle</b> 把视觉 token 压 9× → MLP 投影(2 层,hidden 5120)并入文本流',
-              '视觉嵌入以 <code>inputs_embeds</code> 进入,在 mHC 流扩展之前;原始 id 保留用于模态路由偏置',
-              '单次请求图片数量不限;单图最大约 1344×1344 px'] } },
+              '视觉嵌入按对应 image-token 位置插入输入嵌入序列,在 mHC 流扩展之前;原始 id 保留用于模态路由偏置',
+              '支持可变分辨率,单图最大约 1344×1344 px(3×3 pixel-unshuffle 压低视觉 token 数);上下文最大 1M token'] } },
   posenc: {
     title: '位置信息',
     left: { title: 'Transformer(2017)', sub: '绝对正弦',
       facts: ['输入处一次性加不同频率的 sin/cos',
               '论文表明学习式 PE 与正弦相当;未测试向更长序列外推'] },
-    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: '全 RoPE,YaRN 外推到 1M',
+    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: '全 RoPE;64K 起稀疏从零训练',
       facts: ['所有注意力用 <b>RoPE</b>;视觉塔用 2D-RoPE',
-              '压缩主 KV 用自己的 theta = <b>160,000</b>(一个 latent 代表多个 token)',
-              '<b>YaRN ×16</b> 把 64K 训练窗口外推到 <b>1,048,576</b> token',
+              '主 KV latent(512 通道)在 <b>RoPE 之后</b>量化;RoPE 保持其 L2 范数,这正是 FP4 不需要全局 scale 的原因',
+              '报告未提 YaRN 式外推;34T token 时把序列长度扩到 1M',
               '64K 起稀疏从零训练、无稠密热身;34T token 时扩到 1M'] } },
   attention: {
     title: '注意力机制',
@@ -476,7 +477,7 @@ const CONCEPTS_ZH = {
     title: '残差流与归一化',
     left: { title: 'Transformer(2017)', sub: 'Add & Norm · LayerNorm',
       facts: ['单残差流:x + Sublayer(x),然后 LayerNorm',
-              'Pre-norm 变体只在脚注里提了一句'] },
+              'Post-norm:每个子层后接 LayerNorm(论文 Figure 1)'] },
     right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: 'Single-Pass mHC · n = 4 条流',
       facts: ['残差流是 <b>4 条并行副本</b>;系数 A、B、C 由流本身逐 token 预测',
               '合并矩阵经 <b>20 次 Sinkhorn 迭代</b>变成双随机阵',
@@ -498,7 +499,7 @@ const CONCEPTS_ZH = {
     title: 'KV 缓存',
     left: { title: 'Transformer(2017)', sub: '论文未涉及',
       facts: ['论文早于 KV 缓存实践;朴素部署给<b>每层每头</b>都存 K、V',
-              'base 模型 BF16 下 ≈ <b>36 KB/token</b>(18 处注意力 × 2 KB)',
+              'base 模型 BF16 下 ≈ <b>36 KB/token</b>(18 处注意力 × 2 KB)—— 本页推导,非论文数字',
               '随层数 × 头数线性增长 —— 正是 V4.1 全力攻击的成本'] },
     right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: '890 字节/token · FP4',
       facts: ['跨层复用:只有 Full/Reindex 层物化主 KV,indexer K 一并共享',
@@ -509,12 +510,13 @@ const CONCEPTS_ZH = {
   output: {
     title: '输出与解码',
     left: { title: 'Transformer(2017)', sub: 'Linear + Softmax',
-      facts: ['最终线性投影到词表 + softmax;贪心或 beam 解码',
+      facts: ['最终线性投影到词表 + softmax;论文报告的是 beam search(束宽 4、α = 0.6)',
               '完全自回归,每前向出一个 token'] },
-    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: 'LM head(BF16)+ DSpark',
-      facts: ['<b>DSpark 草稿头:</b>3 个 Transformer block(SWA 窗口 128)、各 128 路由专家(激活 3)—— 一次前向半自回归起草 <b>5 个 token</b>',
+    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: 'LM head + DSpark',
+      facts: ['<b>DSpark 草稿头:</b>3 个 Transformer block(SWA 窗口 128)—— 一次前向半自回归起草 <b>5 个 token</b>;报告未公布草稿头的专家配置',
               'Markov 头建模草稿 token 间依赖;置信头预测逐位置接受率 → 前缀存活估计',
               '调度器按当前负载的吞吐曲线动态选验证长度',
+              '推理强度<b>连续可调(整数 1–100)</b>,在推理成本与准确率之间取舍',
               '与 V3 的 MTP 不同:预训练后专门阶段冻结主干训练,之后随主干微调保持对齐、不向主干传梯度'] } },
 };
 
@@ -744,14 +746,14 @@ const lout = leftBlock({ w: 6, h: 0.9, d: 4, color: COLORS.out, concept: 'output
 // ghost KV rail — paired anchor for the kvcache concept on the left tower
 const lkv = makeRail({ x: LX - 3.8, z: -2.15, w: 0.7, color: COLORS.kv, opacity: 0.15,
   from: encFirst[0], to: lout, concept: 'kvcache', side: 'left',
-  label: 'Naive K/V cache(每层每头,≈36 KB/token)', tip: '2017 论文未涉及 KV cache;朴素部署缓存所有层所有头的 K、V,随层数线性增长' });
+  label: 'Naive K/V cache(每层每头,≈36 KB/token,推导)', tip: '2017 论文未涉及 KV cache;朴素部署缓存所有层所有头的 K、V,随层数线性增长' });
 
 // left labels
 makeLabel('Input Embedding + PE', { follow: lemb, off: new THREE.Vector3(-3.4, 0.05, 0), size: 1.3, align: 'right', concept: 'input', side: 'left' });
 makeLabel('Encoder ×6', { follow: encFirst[0], off: new THREE.Vector3(-3.4, 0.85, 0), size: 1.5, sub: 'MHA(8h) + FFN(2048)', align: 'right', concept: 'attention', side: 'left' });
 makeLabel('Decoder ×6', { follow: decFirst[0], off: new THREE.Vector3(-3.4, 0.5, 0), size: 1.5, sub: 'Masked MHA + Cross-Attn + FFN', align: 'right', concept: 'attention', side: 'left' });
 makeLabel('Linear + Softmax', { follow: lout, off: new THREE.Vector3(0, 1.6, 2.0), size: 1.3, concept: 'output', side: 'left' });
-makeLabel('Naive KV ≈36 KB/tok', { follow: lout, off: new THREE.Vector3(-3.4, 0, 0), size: 1.1, align: 'right', concept: 'kvcache', side: 'left' });
+makeLabel('Naive KV ≈36 KB/tok (derived)', { follow: lout, off: new THREE.Vector3(-3.4, 0, 0), size: 1.1, align: 'right', concept: 'kvcache', side: 'left' });
 const leftTitle = makeLabel('Original Transformer · 2017', { follow: lout, off: new THREE.Vector3(0, 3.45, 0), size: 2.2, sub: '6+6 layers · d=512 · 65M(base)/213M(big)' });
 
 /* ============================================================
@@ -778,7 +780,7 @@ makeLabel('DeepSeek-ViT ×32', { follow: vProj, off: new THREE.Vector3(0, 1.15, 
 
 // main column
 const remb = rightBlock({ w: 6, h: 0.7, d: 4, color: COLORS.dense, concept: 'input', gap: 0.2,
-  label: 'Text / Image Embedding', tip: 'Merged visual embeddings enter as inputs_embeds before mHC expansion', pW: 1.5, aW: 1.5 });
+  label: 'Text / Image Embedding', tip: 'Merged visual embeddings are inserted at the image-token positions in the input sequence, before mHC expansion', pW: 1.5, aW: 1.5 });
 makeLabel('Embeddings + mHC', { follow: remb, off: new THREE.Vector3(3.4, 0.05, 1.8), size: 1.2, align: 'left', concept: 'input', side: 'right' });
 
 const rmhc = rightBlock({ w: 6, h: 0.4, d: 4, color: COLORS.mhc, concept: 'residual', gap: 0.2,
@@ -868,8 +870,8 @@ decGroupLasts[4].userData.gap = 0.06;
 
 // LM head sits directly on the decoder stack (no vertical hole in the tower column)
 const rhead = rightBlock({ w: 6, h: 0.7, d: 4, color: COLORS.out, concept: 'output', gap: 0.1,
-  label: 'LM Head (BF16) + confidence-scheduled verify', tip: 'DSpark verification length chosen dynamically from profiled throughput curves', pW: 1.5, aW: 1.5 });
-makeLabel('LM Head · BF16', { follow: rhead, off: new THREE.Vector3(0, 1.35, 2.0), size: 1.2, concept: 'output', side: 'right' });
+  label: 'LM Head + confidence-scheduled verify', tip: 'DSpark verification length chosen dynamically from profiled throughput curves', pW: 1.5, aW: 1.5 });
+makeLabel('LM Head', { follow: rhead, off: new THREE.Vector3(0, 1.35, 2.0), size: 1.2, concept: 'output', side: 'right' });
 const rightTitle = makeLabel('DeepSeek-V4.1-Flash · 2026', { follow: rhead, off: new THREE.Vector3(0, 3.15, 0), size: 2.2, sub: '40 layers (CED) · 552B · 8B/16B active' });
 
 // DSpark ×3 floats beside/above the head on the label-free left side (does not consume tower flow height)
@@ -881,7 +883,7 @@ for (let i = 0; i < 3; i++) {
   dLast = d;
 }
 dLast.userData.gap = 0;
-makeLabel('DSpark ×3', { follow: dLast, off: new THREE.Vector3(-1.5, 0.15, 1.4), size: 1.0, sub: '读 L37–39 · 起草 5 token', align: 'right', concept: 'output', side: 'right' });
+makeLabel('DSpark ×3', { follow: dLast, off: new THREE.Vector3(-1.5, 0.15, 1.4), size: 1.0, sub: '独立草稿头 · 起草 5 token', align: 'right', concept: 'output', side: 'right' });
 
 // rails: mHC ×4 + FP4 KV rail
 for (let r = 0; r < 4; r++) {
@@ -1005,7 +1007,7 @@ for (const e of [eng1, eng2]) {
   addWire('memory', COLORS.engram, v => v.set(e.position.x + 0.8, yOf(e), 0.7), v => v.set(RX - 3.0, yOf(e), 0.7), true);
 }
 // (DSpark wiring removed: the tap/verify relationship stays as text in the label
-//  "读 L37–39 · 起草 5 token" instead of extra wires on the tower)
+//  "独立草稿头 · 起草 5 token" instead of extra wires on the tower)
 // vision tower → text embedding flow (bezier, 10 segments)
 {
   const SEG = 10;
@@ -1150,7 +1152,7 @@ const TIP_ZH = [
   ['Input Embedding + Sinusoidal', '学习式词嵌入 ×√512,加正弦位置编码(编码器/解码器各一份)'],
   ['Multi-Head Attention', null], // handled by resolver
   ['Linear + Softmax', '最终投影到词表;自回归解码,每前向一个 token'],
-  ['Text / Image Embedding', '合并后的视觉嵌入以 inputs_embeds 进入,在 mHC 流扩展之前'],
+  ['Text / Image Embedding', '合并后的视觉嵌入按 image-token 位置插入输入序列,在 mHC 流扩展之前'],
   ['Single-Pass mHC', '4 条并行残差流;系数 A/B/C 由流自身预测,20 次 Sinkhorn 迭代;Mega-mHC 单 kernel 融合'],
   ['DeepSeek-ViT layer group', 'hidden 1024、16 头、patch 14、2D-RoPE、RMSNorm+SwiGLU —— 仅 prefill 激活'],
   ['3×3 Pixel-Unshuffle', '视觉 token 压 9×;投影层 2 层、hidden 5120'],
@@ -1375,7 +1377,7 @@ const LAYER_SPEC = {
       { t: 'reuse', zh: '不写 KV:缓存不增长', en: 'no KV write: cache does not grow', dim: '' },
       { t: 'compute', zh: 'MoE 384 → 6 + 残差', en: 'MoE 384 → 6 + residual', dim: '6/384' },
     ],
-    note: { zh: 'Reuse 层的执行成本最低:prefill 15 个 kernel、decode 11 个。40 层里 33 层是 Reuse。', en: 'Cheapest layer type: 15 kernels in prefill, 11 in decode. 33 of the 40 layers are Reuse.' },
+    note: { zh: 'Reuse 层的执行成本最低:prefill 15 个 kernel、decode 11 个。40 层里 30 层是 Reuse(编码器 15 + 解码器 15)。', en: 'Cheapest layer type: 15 kernels in prefill, 11 in decode. 30 of the 40 layers are Reuse (15 encoder + 15 decoder).' },
   },
 };
 
@@ -1544,7 +1546,7 @@ function updateCtx() {
   // the absolute 41× comparison lives in the number readouts
   document.getElementById('bar-left').style.width = Math.max(0.4, (L / KV_MAX) * 100).toFixed(2) + '%';
   document.getElementById('bar-right').style.width = Math.max(0.4, (R / KV_RMAX) * 100).toFixed(2) + '%';
-  document.getElementById('ctx-ratio').textContent = (lang === 'zh' ? '差距 ≈' : 'gap ≈') + ' ' + Math.round(L / R) + '×';
+  document.getElementById('ctx-ratio').textContent = (lang === 'zh' ? '推导差距 ≈' : 'derived gap ≈') + ' ' + Math.round(L / R) + '×';
   document.getElementById('ctx-note').textContent = lang === 'zh'
     ? '条长 = 各自 1M 成本的占比;890 B/token 仅指 global KV(不含 SWA 常数项与权重,单请求口径)'
     : 'bar = share of that model\'s own 1M cost; 890 B/token = global KV only (excl. bounded SWA & weights, per request)';
@@ -1646,7 +1648,7 @@ addEventListener('pointermove', (e) => {
     const tag = u.side === 'left' ? '<span class="side-tag" style="color:#6ea8ff">Transformer 2017</span>'
       : '<span class="side-tag" style="color:#b48cff">DeepSeek-V4.1-Flash</span>';
     tooltip.innerHTML = `${tag}<b>${label}</b><br><span style="color:#8d98ad;font-size:10.5px">${tip}</span>` +
-      (SEC[u.concept] ? `<br><span style="color:#4d576b;font-size:9.5px">${lang === 'zh' ? '技术报告' : 'tech report'} ${SEC[u.concept]}</span>` : '');
+      (u.side === 'right' && SEC[u.concept] ? `<br><span style="color:#4d576b;font-size:9.5px">${lang === 'zh' ? '技术报告' : 'tech report'} ${SEC[u.concept]}</span>` : '');
   } else {
     hovered = null;
     hoveredId = null;

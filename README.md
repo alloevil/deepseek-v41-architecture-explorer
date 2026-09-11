@@ -74,7 +74,9 @@ docs/                      screenshots
 - Vaswani et al., *Attention Is All You Need*, 2017 — baseline tower
 - DeepSeek-AI, *DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression*,
   2026-09-10 (51 pp.) — right tower; the paper has no arXiv record, the official PDF
-  ships with the model release
+  ships with the model release:
+  <https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf>
+  (verified cell-by-cell against the extracted report text on 2026-09-11)
 - three.js r160, MIT — rendering, controls, post-processing (vendored)
 
 ## Caveats
@@ -84,6 +86,15 @@ docs/                      screenshots
   they are annotated as approximations in the UI.
 - The 2017 tower is drawn at the paper's base configuration (65 M, d=512); the
   "big" variant (213 M, d=1024) is noted in the tower subtitle.
+- Re-verified cell-by-cell against the technical report on 2026-09-11. The report
+  does not publish four specifics an earlier revision of the viewer asserted —
+  the RoPE theta of the compressed main KV, YaRN-style context extension, the
+  DSpark drafter's expert configuration, and the LM head's precision. Those were
+  removed rather than guessed; the numbers that stayed (window 128, Top-512,
+  mHC expansion 4 with 20 Sinkhorn-Knopp iterations, indexer 32×128, 64 query
+  heads × head dim 512, Engram at layers 1/14) are quoted from the report's model
+  setup. The 36 KB/token baseline and the ≈41× gap are the viewer's own
+  arithmetic and are labelled as such in the UI.
 - The viewer keeps a few `window.__*` hooks used for layout/collision verification
   during development.
 
