@@ -1,0 +1,1914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transformer (2017) vs DeepSeek-V4.1-Flash (2026) — 3D Architecture</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #07090f; font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; }
+  #canvas-wrap {
+    position: fixed; top: 0; left: 0; bottom: 0; right: 486px;
+    background: radial-gradient(130% 100% at 50% -10%, #131c30 0%, #0a0f1c 48%, #06080e 100%);
+  }
+  #header {
+    position: fixed; top: 0; left: 0; right: 0; padding: 14px 22px; z-index: 10;
+    background: linear-gradient(to bottom, rgba(7,9,15,0.92), rgba(7,9,15,0));
+    pointer-events: none;
+  }
+  #header h1 { font-size: 17px; font-weight: 600; color: #e8ecf4; letter-spacing: 0.4px; }
+  #header h1 .dim { color: #7a8699; font-weight: 400; }
+  #header p { font-size: 12px; color: #677185; margin-top: 3px; }
+  #panel {
+    position: fixed; top: 64px; right: 16px; width: 460px; max-height: calc(100vh - 130px);
+    background: rgba(13,17,26,0.94); border: 1px solid #232a3a; border-radius: 10px;
+    z-index: 20; display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.55); backdrop-filter: blur(6px);
+  }
+  #panel-title { padding: 12px 16px 10px; border-bottom: 1px solid #1e2434; position: relative; }
+  #panel-title .k { font-size: 10px; text-transform: uppercase; letter-spacing: 1.4px; color: #5d6a80; }
+  #lang-toggle { position: absolute; top: 10px; right: 12px; display: flex; gap: 4px; }
+  .lbtn {
+    font-size: 10px; padding: 2px 8px; border-radius: 4px; border: 1px solid #2c3548;
+    background: transparent; color: #8d98ad; cursor: pointer; letter-spacing: 0;
+  }
+  .lbtn.active { background: #3a4a6e; color: #fff; border-color: #5a6f9e; }
+  #panel-title .t { font-size: 15px; font-weight: 600; color: #f0f3f9; margin-top: 2px; }
+  #stat-bar { display: flex; border-bottom: 1px solid #1e2434; }
+  .stat { flex: 1; padding: 8px 2px 7px; text-align: center; border-right: 1px solid #1e2434; }
+  .stat:last-child { border-right: none; }
+  .stat b { display: block; font-size: 15px; font-weight: 650; color: #e8ecf4; letter-spacing: 0.2px; font-variant-numeric: tabular-nums; }
+  .stat span { display: block; font-size: 8.5px; color: #5d6a80; text-transform: uppercase; letter-spacing: 0.7px; margin-top: 1px; }
+  #ctx-head { display: flex; justify-content: space-between; align-items: center; padding: 7px 12px 4px;
+    cursor: pointer; font-size: 10.5px; color: #8d98ad; letter-spacing: 0.5px; user-select: none; }
+  #ctx-head:hover { color: #c8d2e4; }
+  #ctx-caret { font-style: normal; transition: transform 0.2s; }
+  #ctx-wrap.collapsed #ctx-caret { transform: rotate(-90deg); }
+  #ctx-wrap.collapsed #ctx-body { display: none; }
+  .col li:first-child { font-size: 12.5px; color: #dfe5f0; }
+  #layer-view { padding: 12px 14px 14px; overflow-y: auto; }
+  #layer-view .lv-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+  #layer-view .lv-head b { font-size: 13px; color: #f0f3f9; }
+  #layer-view .lv-head span { font-size: 10.5px; color: #8d98ad; }
+  #layer-view .lv-back { margin-left: auto; font-size: 10.5px; color: #6ea8ff; cursor: pointer; }
+  #layer-view .lv-back:hover { color: #a8c8ff; }
+  .lstep { display: flex; gap: 8px; padding: 5px 0; border-bottom: 1px dashed #191f2d; }
+  .lstep:last-of-type { border-bottom: none; }
+  .lbadge { flex-shrink: 0; font-size: 9px; padding: 1px 6px; border-radius: 3px; height: 16px; line-height: 14px; }
+  .lbadge.compute { background: rgba(79,124,255,0.18); color: #8fb4ff; border: 1px solid #34518f; }
+  .lbadge.reuse { background: rgba(111,102,168,0.2); color: #b3a8e0; border: 1px solid #564f86; }
+  .lbadge.write { background: rgba(255,207,64,0.16); color: #ffd98a; border: 1px solid #7a6524; }
+  .lstep .ltxt { font-size: 11.5px; color: #b9c2d4; line-height: 1.5; }
+  .lstep .ltxt em { font-style: normal; color: #6b7690; font-size: 10.5px; }
+  #layer-view .lv-note { margin-top: 10px; font-size: 10.5px; color: #7d8aa0; line-height: 1.6; border-left: 2px solid #2c3548; padding-left: 8px; }
+  #walk-cap {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 35; display: none;
+    background: rgba(13,17,26,0.96); border: 1px solid #2c3548; border-radius: 8px;
+    padding: 8px 16px; max-width: 640px; font-size: 12px; color: #dfe5f0; line-height: 1.5;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.55);
+  }
+  #walk-cap b { color: #8fb4ff; margin-right: 6px; font-variant-numeric: tabular-nums; }
+  #walk-cap .wstop { color: #6b7690; margin-left: 8px; font-size: 10.5px; }
+  #pdetail { font-size: 10.5px; color: #8d98ad; margin-top: 5px; line-height: 1.55; display: none; }
+  #pdetail b { color: #c8d2e4; }
+  #pnav { padding: 8px 12px; border-bottom: 1px solid #1e2434; display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip {
+    font-size: 10.5px; padding: 3px 9px; border-radius: 10px; border: 1px solid #2c3548;
+    color: #8d98ad; cursor: pointer; background: rgba(30,38,54,0.5); user-select: none;
+  }
+  .chip:hover { color: #e8ecf4; border-color: #4a5878; }
+  .chip.active { background: #3a4a6e; color: #fff; border-color: #5a6f9e; }
+  #mode-row { padding: 7px 12px; border-bottom: 1px solid #1e2434; display: flex; align-items: center; gap: 6px; }
+  .mbtn, .pbtn {
+    font-size: 10.5px; padding: 3px 10px; border-radius: 5px; border: 1px solid #2c3548;
+    background: transparent; color: #8d98ad; cursor: pointer; user-select: none;
+  }
+  .mbtn:hover, .pbtn:hover { color: #e8ecf4; }
+  .mbtn.active, .pbtn.active { background: rgba(47,143,208,0.2); border-color: #2f8fd0; color: #cfe4f8; }
+  #mode-note { font-size: 9.5px; color: #4d576b; margin-left: auto; }
+  #mode-row .lbl, #ctx-row .lbl { font-size: 10px; color: #5d6a80; text-transform: uppercase; letter-spacing: 1px; margin-right: 2px; }
+  #ctx-row { padding: 7px 12px 3px; display: flex; align-items: center; gap: 8px; }
+  #ctx-slider { flex: 1; accent-color: #2f8fd0; }
+  #ctx-val { font-size: 11px; color: #cfe4f8; min-width: 48px; text-align: right; font-variant-numeric: tabular-nums; }
+  #ctx-ratio { font-size: 10px; color: #b48cff; min-width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
+  #ctx-bars { padding: 2px 12px 10px; border-bottom: 1px solid #1e2434; }
+  .brow { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .btag { font-size: 10px; color: #8d98ad; width: 88px; flex-shrink: 0; }
+  .btrack { flex: 1; height: 8px; background: #161c2a; border-radius: 4px; overflow: hidden; }
+  .btrack i { display: block; height: 100%; border-radius: 4px; }
+  #bar-left { background: linear-gradient(90deg, #6ea8ff, #4f7cff); min-width: 3px; }
+  #bar-right { background: linear-gradient(90deg, #b48cff, #9a6bff); min-width: 3px; }
+  .bnum { font-size: 10.5px; color: #c8d2e4; width: 60px; text-align: right; font-variant-numeric: tabular-nums; }
+  #ctx-note { font-size: 9px; color: #4d576b; padding-top: 3px; }
+  #panel-cols { display: grid; grid-template-columns: 1fr 1fr; overflow-y: auto; }
+  .col { padding: 12px 14px 16px; }
+  .col.left { border-right: 1px solid #1e2434; }
+  .col h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 2px; }
+  .col.left h3 { color: #6ea8ff; }
+  .col.right h3 { color: #b48cff; }
+  .col .sub { font-size: 10.5px; color: #5d6a80; margin-bottom: 9px; }
+  .col ul { list-style: none; }
+  .col li { font-size: 11.5px; line-height: 1.5; color: #b9c2d4; padding: 4px 0 4px 11px; position: relative; border-bottom: 1px dashed #191f2d; }
+  .col li:last-child { border-bottom: none; }
+  .col li::before { content: ''; position: absolute; left: 0; top: 10px; width: 4px; height: 4px; border-radius: 50%; }
+  .col.left li::before { background: #6ea8ff; }
+  .col.right li::before { background: #b48cff; }
+  .col li b { color: #e8ecf4; font-weight: 600; }
+  #legend {
+    position: fixed; left: 16px; bottom: 16px; z-index: 10; background: rgba(13,17,26,0.9);
+    border: 1px solid #232a3a; border-radius: 8px; padding: 10px 14px; font-size: 11px; color: #8d98ad;
+  }
+  #legend .lrow { display: flex; align-items: center; gap: 7px; padding: 2px 4px; cursor: pointer; border-radius: 4px; }
+  #legend .lrow:hover { color: #e8ecf4; background: rgba(58,74,110,0.35); }
+  #legend .sw { width: 11px; height: 11px; border-radius: 2px; flex-shrink: 0; }
+  button:focus-visible, .chip:focus-visible, .lrow:focus-visible { outline: 1.5px solid #5a6f9e; outline-offset: 1px; }
+  #hint { position: fixed; left: 16px; top: 64px; z-index: 10; font-size: 11px; color: #4d576b; pointer-events: none; line-height: 1.7; }
+  #howto {
+    position: fixed; left: 50%; top: 74px; transform: translateX(-50%); z-index: 40;
+    background: rgba(13,17,26,0.97); border: 1px solid #2c3548; border-radius: 10px;
+    padding: 14px 16px 12px; max-width: 460px; box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  }
+  #howto h4 { font-size: 12px; color: #e8ecf4; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.3px; }
+  #howto ul { list-style: none; }
+  #howto li { font-size: 11.5px; line-height: 1.65; color: #b9c2d4; padding-left: 12px; position: relative; }
+  #howto li::before { content: ''; position: absolute; left: 0; top: 9px; width: 4px; height: 4px; border-radius: 50%; background: #5a6f9e; }
+  #howto li b { color: #e8ecf4; }
+  #howto .k { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  #howto-close {
+    margin-top: 10px; font-size: 11px; padding: 5px 14px; border-radius: 6px; cursor: pointer;
+    background: rgba(58,74,110,0.9); color: #dfe5f0; border: 1px solid #5a6f9e;
+  }
+  #howto-close:hover { background: rgba(80,100,146,0.95); }
+  #tooltip {
+    position: fixed; z-index: 30; pointer-events: none; display: none;
+    background: rgba(16,20,30,0.96); border: 1px solid #2c3548; border-radius: 6px;
+    padding: 6px 10px; font-size: 11.5px; color: #dfe5f0; max-width: 260px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  }
+  #tooltip .side-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 1px; }
+  #view-btns { position: fixed; right: 16px; bottom: 16px; z-index: 20; display: flex; gap: 6px;
+    flex-wrap: wrap-reverse; justify-content: flex-end; max-width: min(720px, calc(100vw - 520px)); }
+  #view-btns button {
+    background: rgba(30,38,54,0.9); color: #aab4c8; border: 1px solid #2c3548; border-radius: 6px;
+    padding: 7px 14px; font-size: 11.5px; cursor: pointer;
+  }
+  #view-btns button:hover { background: rgba(44,55,78,0.95); color: #e8ecf4; }
+  #view-btns button.active { border-color: #5a6f9e; color: #fff; background: rgba(58,74,110,0.9); }
+  /* narrow-screen overrides live at the very end so they beat the base rules above */
+  @media (max-width: 980px) {
+    #canvas-wrap { right: 0; bottom: 46vh; }
+    #panel { top: auto; bottom: 6px; left: 6px; right: 6px; width: auto; max-height: 44vh; }
+    #legend, #hint { display: none; }
+    #view-btns { bottom: calc(46vh + 8px); max-width: calc(100vw - 12px); }
+    #walk-cap { bottom: calc(46vh + 56px); max-width: calc(100vw - 24px); }
+  }
+</style>
+</head>
+<body>
+<div id="canvas-wrap"></div>
+
+<div id="header">
+  <h1>Original Transformer <span class="dim">(Vaswani et al., 2017)</span> &nbsp;↔&nbsp; DeepSeek-V4.1-Flash <span class="dim">(DeepSeek-AI, 2026 · 552B MoE · 1M ctx · 890 B/token KV)</span></h1>
+  <p>拖拽旋转 · 滚轮缩放 · 点击任意模块左右对照;右侧面板可按概念跳转、切换 按层/按参数/按激活 视图</p>
+</div>
+
+<div id="hint"
+  data-zh="左塔:6 编码器 + 6 解码器,d=512<br>右塔:40 层(20 因果编码器 + 20 解码器,CED)<br>右下角 ▶ 走一遍(或按 W):跟一个 token 走完 40 层 · ↑↓ 遍历 · Esc 清除"
+  data-en="Left: 6+6 enc/dec, d=512<br>Right: 40 layers (20 causal enc + 20 dec, CED)<br>bottom-right ▶ Walk (or press W): follow one token through the 40 layers · ↑↓ walk · Esc clear">
+  左塔:6 编码器 + 6 解码器,d=512<br>右塔:40 层(20 因果编码器 + 20 解码器,CED)<br>右下角 ▶ 走一遍(或按 W):跟一个 token 走完 40 层 · ↑↓ 遍历 · Esc 清除
+</div>
+
+<div id="panel">
+  <div id="panel-title">
+    <div class="k">Side-by-side inspection
+      <span id="lang-toggle">
+        <button class="lbtn active" data-lang="zh">中</button>
+        <button class="lbtn" data-lang="en">EN</button>
+      </span>
+    </div>
+    <div class="t" id="ptext">Overview — 点击任意模块</div>
+    <div id="pdetail"></div>
+  </div>
+  <div id="stat-bar">
+    <div class="stat"><b>552B</b><span data-zh="总参" data-en="total">总参</span></div>
+    <div class="stat"><b>8/16B</b><span data-zh="激活 pre/dec" data-en="act. pre/dec">激活 pre/dec</span></div>
+    <div class="stat"><b>890B</b><span data-zh="KV/token" data-en="KV/token">KV/token</span></div>
+    <div class="stat"><b>1M</b><span data-zh="上下文" data-en="context">上下文</span></div>
+  </div>
+  <div id="pnav"></div>
+  <div id="mode-row">
+    <span class="lbl">Scale by</span>
+    <button class="mbtn active" data-mode="layer" data-zh="按层" data-en="Layer">按层</button>
+    <button class="mbtn" data-mode="params" data-zh="按参数" data-en="Params">按参数</button>
+    <button class="mbtn" data-mode="active" data-zh="按激活" data-en="Active">按激活</button>
+    <span class="lbl" style="margin-left:6px">Phase</span>
+    <button class="pbtn active" data-phase="decode">Decode</button>
+    <button class="pbtn" data-phase="prefill">Prefill</button>
+    <span id="mode-note">高度 = 层(均匀)</span>
+  </div>
+  <div id="ctx-wrap">
+    <div id="ctx-head"><span data-zh="KV 成本计算器(4K → 1M)" data-en="KV cost calculator (4K → 1M)">KV 成本计算器(4K → 1M)</span><i id="ctx-caret">▾</i></div>
+    <div id="ctx-body">
+      <div id="ctx-row">
+        <span class="lbl">上下文</span>
+        <input type="range" id="ctx-slider" min="0" max="1000" value="650">
+        <span id="ctx-val">—</span>
+        <span id="ctx-ratio">—</span>
+      </div>
+      <div id="ctx-bars">
+        <div class="brow"><span class="btag" id="btag-left">2017 朴素 KV</span><div class="btrack"><i id="bar-left"></i></div><span id="kv-left" class="bnum">—</span></div>
+        <div class="brow"><span class="btag" id="btag-right">V4.1 FP4 KV</span><div class="btrack"><i id="bar-right"></i></div><span id="kv-right" class="bnum">—</span></div>
+        <div id="ctx-note">条长 = 各自 1M 成本的占比;890 B/token 仅指 global KV(不含 SWA 常数项与权重,单请求口径)</div>
+      </div>
+    </div>
+  </div>
+  <div id="layer-view" style="display:none"></div>
+  <div id="panel-cols">
+    <div class="col left" id="col-left"></div>
+    <div class="col right" id="col-right"></div>
+  </div>
+</div>
+
+<div id="legend"></div>
+
+<div id="howto" style="display:none">
+  <h4 data-zh="怎么读这张图" data-en="How to read this diagram">怎么读这张图</h4>
+  <ul>
+    <li data-zh="<b>颜色 = 注意力模式</b>:<span class='k' style='background:#9a6bff'></span>Full(自算 KV+索引)、<span class='k' style='background:#e07a3d'></span>Reindex(复用 KV,重打分)、<span class='k' style='background:#6f66a8'></span>Reuse(复用 KV+Top-K)、<span class='k' style='background:#18b8a8'></span>SWA(滑窗 128)"
+        data-en="<b>Colour = attention mode</b>: <span class='k' style='background:#9a6bff'></span>Full (own KV+index), <span class='k' style='background:#e07a3d'></span>Reindex (reuse KV, rescore), <span class='k' style='background:#6f66a8'></span>Reuse (reuse KV+Top-K), <span class='k' style='background:#18b8a8'></span>SWA (window 128)">…</li>
+    <li data-zh="<b>右侧括号 = 复用分组</b>:每组只有首层物化 KV,其余层复用它;<b>块右缘绿条 = 每层都有 MoE</b>(地面立方体阵是同一组 384 专家的放大示意)"
+        data-en="<b>Right brackets = reuse groups</b>: only the group's first layer materialises KV, the rest reuse it; <b>green strip on each block = MoE in every layer</b> (the cube field is the same 384 experts, magnified)">…</li>
+    <li data-zh="<b>想看懂机制</b>:点任意主干层 → 面板显示<b>该层内部数据流</b>(哪些是算的、哪些是复用、哪些写缓存);按 <b>▶ 走一遍</b> 跟随一个 token 从嵌入走到输出"
+        data-en="<b>To understand the mechanism</b>: click any backbone layer to see <b>that layer's internal dataflow</b> (what is computed, reused, or written to cache); press <b>Walk</b> to follow one token from embedding to output">…</li>
+    <li data-zh="<b>塔外挂件 = 主干之外的模块</b>:<span class='k' style='background:#2f8fd0'></span>ViT(图像输入通路)、<span class='k' style='background:#ffcf40'></span>Engram(记忆表)、<span class='k' style='background:#ff8d5c'></span>DSpark(投机解码,读 L37–39)。点击任意模块看两塔同一概念对照;↑↓ 遍历 · Esc 清除 · 空格 巡游"
+        data-en="<b>Side modules = outside the backbone</b>: <span class='k' style='background:#2f8fd0'></span>ViT (image path), <span class='k' style='background:#ffcf40'></span>Engram (memory tables), <span class='k' style='background:#ff8d5c'></span>DSpark (speculative decode, taps L37–39). Click any block for a side-by-side comparison; ↑↓ walk · Esc clear · Space tour">…</li>
+  </ul>
+  <button id="howto-close" data-zh="知道了" data-en="Got it">知道了</button>
+</div>
+
+<div id="walk-cap"></div>
+
+<div id="tooltip"></div>
+<div id="view-btns">
+  <button data-view="front" data-zh="前视" data-en="Front">前视</button>
+  <button data-view="side" data-zh="侧视" data-en="Side">侧视</button>
+  <button data-view="lines" data-zh="连线" data-en="Lines">连线</button>
+  <button data-view="walk" data-zh="▶ 走一遍" data-en="Walk">▶ 走一遍</button>
+  <button data-view="quality" data-zh="画质:高" data-en="HQ">画质:高</button>
+  <button data-view="tour" data-zh="▶ 巡游" data-en="Tour">▶ 巡游</button>
+  <button data-view="reset" data-zh="重置" data-en="Reset">重置</button>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from './OrbitControls.js';
+import { RoundedBoxGeometry } from './RoundedBoxGeometry.js';
+import { EffectComposer } from './postprocessing/EffectComposer.js';
+import { RenderPass } from './postprocessing/RenderPass.js';
+import { UnrealBloomPass } from './postprocessing/UnrealBloomPass.js';
+
+/* ============================================================
+   Comparison content — facts from:
+   Vaswani et al. 2017 ("Attention Is All You Need") and
+   DeepSeek-V4.1-Flash tech report (2026-09-10, 51 pp.)
+   Parameter counts in the scale modes are documented
+   approximations (report gives component totals).
+   ============================================================ */
+const CONCEPTS = {
+  overview: {
+    title: 'Overview',
+    left: { title: 'Transformer (2017)', sub: 'base 65M · big 213M · 4.5M sentence pairs · Adam',
+      facts: ['<b>Encoder-decoder</b>, 6 + 6 layers, d<sub>model</sub>=512, 8 heads',
+              'Dense <b>O(n²)</b> attention over the full sequence, both stacks',
+              'Sinusoidal positional encoding added to embeddings',
+              'Position-wise FFN (d<sub>ff</sub>=2048, ReLU) per layer',
+              'Single residual stream; LayerNorm after each sublayer',
+              'Scale was never the axis: the 2017 "big" model was 213M (d=1024, 16 heads) — the real difference is structural'] },
+    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: '552B backbone + 196B Engram · 8B active prefill / 16B decode · 45T tokens',
+      facts: ['<b>Causal Encoder-Decoder (CED)</b>: 40 layers = 20 encoder + 20 decoder; decoder global KV projected from the encoder\'s last hidden state — prefill runs only half the stack',
+              'Every layer: 128-token <b>SWA</b> + global branch via <b>CSA2</b> (cross-layer KV & Top-K index reuse, hierarchical sparse indexer, Top-512)',
+              '<b>DeepSeekMoE</b> FFN everywhere: 1 shared + 384 routed experts (6 active), modality-specific routing bias',
+              '<b>Single-Pass mHC</b>: 4 parallel residual streams, Sinkhorn-stochastic combine',
+              '<b>Engram</b> n-gram memory at layers 1 & 14 (196B params); <b>DSpark</b> 5-token speculative drafter',
+              '<b>FP4 main KV cache</b> → 890 bytes/token global KV (1/4 of V4-Flash, 1/437 of V1)'] } },
+
+  input: {
+    title: 'Input & Embeddings',
+    left: { title: 'Transformer (2017)', sub: 'learned embedding + sinusoids',
+      facts: ['Learned token embedding scaled by √d<sub>model</sub>',
+              '<b>Sinusoidal PE</b> added to embeddings (encoder & decoder each)',
+              'Text only; d<sub>model</sub> = 512'] },
+    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: 'native multimodal input path',
+      facts: ['Text embedding + <b>DeepSeek-ViT</b>: 32 layers, hidden 1024, 16 heads, patch 14, <b>2D-RoPE</b>, linear patch embed (Muon-friendly)',
+              '<b>3×3 pixel-unshuffle</b> cuts visual tokens 9× → MLP projector (2 layers, hidden 5120) into the text stream',
+              'Visual embeddings enter as <code>inputs_embeds</code> before the mHC stream expansion; raw ids kept for modality routing bias',
+              'No cap on images/prompt; up to ~1344×1344 px per image'] } },
+
+  posenc: {
+    title: 'Positional Information',
+    left: { title: 'Transformer (2017)', sub: 'absolute sinusoidal',
+      facts: ['sin/cos of different frequencies added once at the input',
+              'The paper showed learned PE ≈ sinusoidal; extrapolation to longer sequences untested'] },
+    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: 'RoPE everywhere, YaRN to 1M',
+      facts: ['<b>RoPE</b> in all attention; 2D-RoPE in the vision tower',
+              'Compressed main KV rotates at its own theta = <b>160,000</b> (one latent stands for several tokens)',
+              '<b>YaRN ×16</b> extends the 64K training window to <b>1,048,576</b> tokens',
+              'Trained sparse-from-scratch at 64K, no dense warmup; extended to 1M at 34T tokens'] } },
+
+  attention: {
+    title: 'Attention Mechanism',
+    left: { title: 'Transformer (2017)', sub: '8 heads · d_k = d_v = 64 · dense',
+      facts: ['Scaled dot-product attention over <b>all</b> previous positions: O(n²)',
+              'Encoder: 8-head self-attention. Decoder: <b>masked</b> self-attention + <b>cross-attention</b> to encoder outputs',
+              'Each head projects Q, K, V independently (d_model 512 → 8×64)'] },
+    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: '64 q-heads · head dim 512 · q-compress 1280',
+      facts: ['<b>No cross-attention</b>: CED projects decoder global KV from H<sub>20</sub>, the causal encoder\'s final hidden state (K<sub>l</sub>=H<sub>20</sub>W<sub>lKV</sub>)',
+              'Each layer: own global Q + SWA KV; global reads only <b>Top-512</b> main KV entries per query',
+              'Indexer: 32 heads, dim 128, scores main KV; indexer K projected from main KV (CSA2 simplification)',
+              'Decode FLOPs nearly constant: 4K→1M context costs only +25% compute'] } },
+
+  sparse: {
+    title: 'Layer Schedule: CSA2 Modes',
+    left: { title: 'Transformer (2017)', sub: 'uniform layers',
+      facts: ['All 6 encoder and 6 decoder layers are identical dense attention blocks',
+              'No sharing or reuse of any state across layers'] },
+    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: 'statically assigned Full / Reindex / Reuse',
+      facts: ['<b>L0–1:</b> pure SWA (window 128)',
+              '<b>Encoder L2–19:</b> CSA2 ratio m=2, three groups of 6 — first layer <b>Full</b> (computes main KV + indexer + Top-K), other 5 <b>Reuse</b>',
+              '<b>Decoder L20–39:</b> ratio m=1 (uncompressed), five groups of 4 — group 1: Full + 3 Reuse; groups 2–5: <b>Reindex</b> (reuse KV, own indexer Q rescores shared K → fresh Top-K) + 3 Reuse',
+              '<b>Hierarchical Sparse Indexer:</b> first Full decoder layer builds a candidate pool (2048 blocks × 8 = 16,384 positions); later indexers score only the pool — cost per query becomes O(1) in context length',
+              'Reuse-mode layer = 15 kernels prefill / 11 decode'] } },
+
+  ffn: {
+    title: 'Feed-Forward / Experts',
+    left: { title: 'Transformer (2017)', sub: 'd_ff = 2048 · ReLU',
+      facts: ['Position-wise 2-layer MLP: 512 → 2048 → 512, ReLU between',
+              'Every token passes through the <b>entire</b> FFN — all parameters activated, every layer, every token'] },
+    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: 'DeepSeekMoE · 384 routed + 1 shared',
+      facts: ['MoE in <b>every</b> block: 1 shared expert + 384 routed experts, <b>6 activated</b> per token, expert dim 2304',
+              '<b>SwiGLU</b> with clamping at threshold 10',
+              '<b>Modality-specific aux-free load balancing:</b> separate correction biases for text vs image tokens, updated independently per modality',
+              'Prefill activates 8B params/token, decode 16B — asymmetric by design for input-heavy agent workloads'] } },
+
+  residual: {
+    title: 'Residual Stream & Norm',
+    left: { title: 'Transformer (2017)', sub: 'Add & Norm · LayerNorm',
+      facts: ['One residual stream: x + Sublayer(x), then LayerNorm',
+              'Pre-norm variant mentioned only in a footnote'] },
+    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: 'Single-Pass mHC · n = 4 streams',
+      facts: ['Residual carried as <b>4 parallel copies</b>; per-token coefficients A, B, C predicted from the stream itself',
+              'Combine matrix made doubly stochastic via <b>20 Sinkhorn iterations</b>',
+              '<b>Single-Pass mHC:</b> input-mixing coefficients shifted one block, breaking the kernel dependency chain',
+              '<b>Mega-mHC</b> deployment kernel fuses residual update + mixing + coefficient prediction: residual read/written once — halves activation memory traffic vs V4\'s 4-kernel version',
+              'RMSNorm throughout (largest trained norm weight ≈ 1)'] } },
+
+  memory: {
+    title: 'External Memory',
+    left: { title: 'Transformer (2017)', sub: '—(无对应物)',
+      facts: ['No external memory; all knowledge lives in the attention and FFN weights',
+              'No counterpart exists on the left tower — that contrast is the whole point'] },
+    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: 'Engram · 196B params at layers 1 & 14',
+      facts: ['Conditional memory decoupled from computation: hash-table lookup on <b>n-gram orders {2,3,4}</b>, 8 hash heads, dim 2048 per order',
+              'Two modules (~16M entries/head, distinct prime table sizes) at layers 1 and 14 — balanced across pipeline stages',
+              'Embeddings written into the residual stream through a learned gate; conv branch dropped vs original Engram',
+              'Deterministic addressing → prefetched from host memory via background RDMA, overlapping layer-0 compute',
+              'Trained with momentum + Sinkhorn balancing (not Adam) to cut optimizer-state memory'] } },
+
+  kvcache: {
+    title: 'KV Cache',
+    left: { title: 'Transformer (2017)', sub: 'not addressed in the paper',
+      facts: ['The paper predates KV-caching practice; a naive deployment caches K and V for <b>every head of every layer</b>',
+              'base model at BF16 ≈ <b>36 KB/token</b> (18 attention sites × 2 KB)',
+              'Grows linearly with layers × heads — exactly the cost V4.1 attacks'] },
+    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: '890 bytes/token · FP4',
+      facts: ['Cross-layer reuse: only Full/Reindex layers materialize main KV; indexer K shared alongside it',
+              '<b>FP4 main KV cache</b>: MXFP4 E2M1, one E4M3 scale per 16 channels, quantized <b>after RoPE</b> with QAT; dequantized before attention for accuracy',
+              'SWA KV stays FP8 (too sensitive for FP4)',
+              '<b>SWA Bounded Replay:</b> persistent SSD/host cache holds only global KV; SWA states reconstructed by replaying the last n<sub>win</sub> tokens (not L×n<sub>win</sub>) → persistent footprint ≈ <b>1/8 of V4-Flash</b>',
+              'Global runtime KV = 1/4 of V4-Flash, 1/437 of DeepSeek-V1'] } },
+
+  output: {
+    title: 'Output & Decoding',
+    left: { title: 'Transformer (2017)', sub: 'Linear + Softmax',
+      facts: ['Final linear projection to vocab + softmax; greedy or beam decode',
+              'Fully autoregressive, one token per forward pass'] },
+    right: { title: 'DeepSeek-V4.1-Flash (2026)', sub: 'LM head (BF16) + DSpark',
+      facts: ['<b>DSpark drafter:</b> 3 Transformer blocks (SWA window 128), 128 routed experts each (3 active) — one pass drafts a <b>5-token block</b> semi-autoregressively',
+              'Markov head models dependencies among draft tokens; confidence head predicts per-position acceptance → prefix-survival estimates',
+              'Scheduler picks verification length from profiled throughput curves under current load',
+              'Unlike V3\'s MTP: trained in a dedicated post-pretraining stage with frozen backbone, then kept aligned during post-training without back-prop into the backbone'] } },
+};
+
+const CONCEPTS_ZH = {
+  overview: {
+    title: '总览',
+    left: { title: 'Transformer(2017)', sub: 'base 65M · big 213M · 450 万句对 · Adam',
+      facts: ['<b>编码器-解码器</b>,6+6 层,d<sub>model</sub>=512,8 头',
+              '两个栈都是全序列稠密注意力 <b>O(n²)</b>',
+              '正弦位置编码加在嵌入上',
+              '逐位置 FFN(d<sub>ff</sub>=2048,ReLU)',
+              '单一残差流;每个子层后接 LayerNorm',
+              '规模不是对比轴:2017 的 "big" 模型 213M(d=1024,16 头)—— 真正的差异在结构'] },
+    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: '552B 主干 + 196B Engram · prefill 激活 8B / 解码 16B · 45T tokens',
+      facts: ['<b>因果编码器-解码器(CED)</b>:40 层 = 20 编码器 + 20 解码器;解码器全局 KV 由编码器最后隐状态投影 —— prefill 只跑一半栈',
+              '每层:128 token 滑动窗口(SWA)+ <b>CSA2</b> 全局分支(跨层 KV 与 Top-K 索引复用、层次化稀疏索引器、Top-512)',
+              '处处 <b>DeepSeekMoE</b>:1 共享 + 384 路由专家(激活 6),按模态分别负载均衡',
+              '<b>Single-Pass mHC</b>:4 条并行残差流,Sinkhorn 随机合并',
+              '<b>Engram</b> n-gram 记忆挂在 L1 与 L14(196B);<b>DSpark</b> 5-token 投机解码草稿头',
+              '<b>FP4 主 KV 缓存</b> → 每 token 全局 KV 仅 890 字节(V4-Flash 的 1/4,V1 的 1/437)'] } },
+  input: {
+    title: '输入与嵌入',
+    left: { title: 'Transformer(2017)', sub: '学习式嵌入 + 正弦',
+      facts: ['学习式词嵌入,缩放 × √d<sub>model</sub>',
+              '<b>正弦位置编码</b>加到嵌入上(编码器、解码器各自一份)',
+              '纯文本;d<sub>model</sub> = 512'] },
+    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: '原生多模态输入通路',
+      facts: ['文本嵌入 + <b>DeepSeek-ViT</b>:32 层、hidden 1024、16 头、patch 14、<b>2D-RoPE</b>,线性 patch 嵌入(适配 Muon)',
+              '<b>3×3 pixel-unshuffle</b> 把视觉 token 压 9× → MLP 投影(2 层,hidden 5120)并入文本流',
+              '视觉嵌入以 <code>inputs_embeds</code> 进入,在 mHC 流扩展之前;原始 id 保留用于模态路由偏置',
+              '单次请求图片数量不限;单图最大约 1344×1344 px'] } },
+  posenc: {
+    title: '位置信息',
+    left: { title: 'Transformer(2017)', sub: '绝对正弦',
+      facts: ['输入处一次性加不同频率的 sin/cos',
+              '论文表明学习式 PE 与正弦相当;未测试向更长序列外推'] },
+    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: '全 RoPE,YaRN 外推到 1M',
+      facts: ['所有注意力用 <b>RoPE</b>;视觉塔用 2D-RoPE',
+              '压缩主 KV 用自己的 theta = <b>160,000</b>(一个 latent 代表多个 token)',
+              '<b>YaRN ×16</b> 把 64K 训练窗口外推到 <b>1,048,576</b> token',
+              '64K 起稀疏从零训练、无稠密热身;34T token 时扩到 1M'] } },
+  attention: {
+    title: '注意力机制',
+    left: { title: 'Transformer(2017)', sub: '8 头 · d_k = d_v = 64 · 稠密',
+      facts: ['对<b>全部</b>历史位置做缩放点积:O(n²)',
+              '编码器:8 头自注意力。解码器:<b>因果</b>自注意力 + 对编码器输出的<b>交叉注意力</b>',
+              '每头独立投影 Q、K、V(512 → 8×64)'] },
+    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: '64 q-头 · head dim 512 · q 压缩 1280',
+      facts: ['<b>没有交叉注意力</b>:CED 用 H<sub>20</sub>(编码器最后隐状态)投影解码器全局 KV(K<sub>l</sub>=H<sub>20</sub>W<sub>lKV</sub>)',
+              '每层:自有全局 Q + SWA KV;全局只读 <b>Top-512</b> 主 KV 条目',
+              '索引器 32 头、dim 128;indexer K 由主 KV 直接投影(CSA2 简化)',
+              '解码 FLOPs 几乎恒定:4K→1M 上下文只多 25% 算力'] } },
+  sparse: {
+    title: '层调度:CSA2 三种模式',
+    left: { title: 'Transformer(2017)', sub: '层完全同构',
+      facts: ['6 层编码器、6 层解码器完全相同的稠密注意力块',
+              '层与层之间不共享、不复用任何状态'] },
+    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: '静态指定 Full / Reindex / Reuse',
+      facts: ['<b>L0–1:</b>纯 SWA(窗口 128)',
+              '<b>编码器 L2–19:</b>CSA2 压缩率 m=2,三组各 6 层 —— 组首层 <b>Full</b>(自算主 KV+索引+Top-K),其余 5 层 <b>Reuse</b>',
+              '<b>解码器 L20–39:</b>m=1(不压缩),五组各 4 层 —— 第 1 组 Full + 3 Reuse;后 4 组 <b>Reindex</b>(复用 KV,自己的 indexer Q 只对候选池重打分)+ 3 Reuse',
+              '<b>层次化稀疏索引器:</b>解码器首个 Full 层建候选池(2048 块 × 8 = 16,384 位),后续索引器只在池内打分 —— 每 query 成本与上下文长度无关',
+              'Reuse 层 prefill 仅 15 个 kernel、解码 11 个'] } },
+  ffn: {
+    title: '前馈网络 / 专家',
+    left: { title: 'Transformer(2017)', sub: 'd_ff = 2048 · ReLU',
+      facts: ['逐位置两层 MLP:512 → 2048 → 512,中间 ReLU',
+              '每个 token 都过<b>完整</b> FFN —— 全参数激活,每层、每 token'] },
+    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: 'DeepSeekMoE · 384 路由 + 1 共享',
+      facts: ['每个 block 都是 MoE:1 共享专家 + 384 路由专家,每 token <b>激活 6 个</b>,专家中间维 2304',
+              '<b>SwiGLU</b>,阈值 10 截断',
+              '<b>按模态的免辅助损失负载均衡:</b>文本与图像 token 各有校正偏置、按各自负载独立更新',
+              'prefill 每 token 激活 8B、解码 16B —— 为输入重的 agent 场景刻意做的非对称设计'] } },
+  residual: {
+    title: '残差流与归一化',
+    left: { title: 'Transformer(2017)', sub: 'Add & Norm · LayerNorm',
+      facts: ['单残差流:x + Sublayer(x),然后 LayerNorm',
+              'Pre-norm 变体只在脚注里提了一句'] },
+    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: 'Single-Pass mHC · n = 4 条流',
+      facts: ['残差流是 <b>4 条并行副本</b>;系数 A、B、C 由流本身逐 token 预测',
+              '合并矩阵经 <b>20 次 Sinkhorn 迭代</b>变成双随机阵',
+              '<b>Single-Pass mHC:</b>输入混合系数错位一个 block,打破 kernel 依赖链',
+              '<b>Mega-mHC</b> 部署 kernel 把残差更新+混合+系数预测融合为一个 kernel:残差只读写一次 —— 激存流量是 V4 四 kernel 实现的一半',
+              '全程 RMSNorm(最大的已训 norm 权重约 1)'] } },
+  memory: {
+    title: '外部记忆',
+    left: { title: 'Transformer(2017)', sub: '—(无对应物)',
+      facts: ['无外部记忆;全部知识都在注意力和 FFN 权重里',
+              '此概念在左塔没有实体 —— 这正是对照点'] },
+    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: 'Engram · L1 与 L14,共 196B',
+      facts: ['与计算解耦的条件记忆:按 <b>n-gram {2,3,4}</b> 哈希查表,8 个哈希头、每序 dim 2048',
+              '两块模块(每头约 1600 万条、素数表长)放在 L1 与 L14 —— 均衡流水线阶段显存',
+              '嵌入经可学习门控写入残差流;相比原版 Engram 去掉卷积分支',
+              '确定性寻址 → 后台 RDMA 从主机内存预取,与第 0 层计算重叠',
+              '动量 + Sinkhorn 均衡训练(非 Adam),省优化器状态显存'] } },
+  kvcache: {
+    title: 'KV 缓存',
+    left: { title: 'Transformer(2017)', sub: '论文未涉及',
+      facts: ['论文早于 KV 缓存实践;朴素部署给<b>每层每头</b>都存 K、V',
+              'base 模型 BF16 下 ≈ <b>36 KB/token</b>(18 处注意力 × 2 KB)',
+              '随层数 × 头数线性增长 —— 正是 V4.1 全力攻击的成本'] },
+    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: '890 字节/token · FP4',
+      facts: ['跨层复用:只有 Full/Reindex 层物化主 KV,indexer K 一并共享',
+              '<b>FP4 主 KV:</b>MXFP4 E2M1、每 16 通道一个 E4M3 scale,RoPE 之后量化(QAT);注意力前反量化保精度',
+              'SWA KV 保持 FP8(对量化太敏感)',
+              '<b>SWA Bounded Replay:</b>SSD/主机只存全局 KV,SWA 状态靠重放最近 n<sub>win</sub> 个 token 重建(而非 L×n<sub>win</sub>)→ 持久缓存 ≈ <b>V4-Flash 的 1/8</b>',
+              '全局运行时 KV = V4-Flash 的 1/4、DeepSeek-V1 的 1/437'] } },
+  output: {
+    title: '输出与解码',
+    left: { title: 'Transformer(2017)', sub: 'Linear + Softmax',
+      facts: ['最终线性投影到词表 + softmax;贪心或 beam 解码',
+              '完全自回归,每前向出一个 token'] },
+    right: { title: 'DeepSeek-V4.1-Flash(2026)', sub: 'LM head(BF16)+ DSpark',
+      facts: ['<b>DSpark 草稿头:</b>3 个 Transformer block(SWA 窗口 128)、各 128 路由专家(激活 3)—— 一次前向半自回归起草 <b>5 个 token</b>',
+              'Markov 头建模草稿 token 间依赖;置信头预测逐位置接受率 → 前缀存活估计',
+              '调度器按当前负载的吞吐曲线动态选验证长度',
+              '与 V3 的 MTP 不同:预训练后专门阶段冻结主干训练,之后随主干微调保持对齐、不向主干传梯度'] } },
+};
+
+const NAV = [
+  ['input', '输入', 'Input'], ['posenc', '位置', 'Position'], ['attention', '注意力', 'Attention'],
+  ['sparse', '稀疏调度', 'Sparse'], ['ffn', 'FFN / 专家', 'FFN/Exp'], ['residual', '残差', 'Residual'],
+  ['memory', '记忆', 'Memory'], ['kvcache', 'KV 缓存', 'KV Cache'], ['output', '输出', 'Output'],
+];
+const MODE_NOTE = {
+  zh: { layer: '高度 = 层(均匀)', params: '高度 ≈ 总参数量(近似)', active: '高度 ≈ 解码每 token 激活量(近似)' },
+  en: { layer: 'height = per layer', params: 'height ≈ total params (approx.)', active: 'height ≈ decode-active per token (approx.)' },
+};
+
+/* ============================================================
+   Scene setup
+   ============================================================ */
+const wrap = document.getElementById('canvas-wrap');
+const scene = new THREE.Scene();
+scene.background = (() => { // gradient backdrop (bloom-safe: composer needs opaque bg)
+  const c = document.createElement('canvas'); c.width = 512; c.height = 512;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(256, -50, 20, 256, 300, 620);
+  grad.addColorStop(0, '#131c30'); grad.addColorStop(0.48, '#0a0f1c'); grad.addColorStop(1, '#06080e');
+  g.fillStyle = grad; g.fillRect(0, 0, 512, 512);
+  return new THREE.CanvasTexture(c);
+})();
+scene.fog = new THREE.Fog(0x0a0f1c, 75, 170);
+
+const camera = new THREE.PerspectiveCamera(45, wrap.clientWidth / wrap.clientHeight, 0.1, 400);
+const HOME_POS = new THREE.Vector3(0, 13, 60);
+const HOME_TGT = new THREE.Vector3(0, 9, 0);
+const SIDE_POS = new THREE.Vector3(61, 14, 0);
+camera.position.copy(HOME_POS);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+// ≥1.5× supersampling: on 1× displays plain MSAA still leaves visible stair-steps
+renderer.setPixelRatio(Math.min(Math.max(devicePixelRatio, 1.5), 2));
+wrap.appendChild(renderer.domElement);
+
+// Bloom composer — render into a 4× MSAA target, otherwise the offscreen pass
+// loses the renderer's antialiasing and the whole scene goes jagged
+const composerTarget = new THREE.WebGLRenderTarget(wrap.clientWidth, wrap.clientHeight, {
+  samples: 4, type: THREE.HalfFloatType });
+const composer = new EffectComposer(renderer, composerTarget);
+composer.setSize(wrap.clientWidth, wrap.clientHeight); // size in CSS px; composer applies pixelRatio
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(wrap.clientWidth, wrap.clientHeight), 0.35, 0.55, 0.85));
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.copy(HOME_TGT);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.85;
+controls.minDistance = 4;
+controls.maxDistance = 110;
+
+scene.add(new THREE.AmbientLight(0x8899bb, 0.65));
+const key = new THREE.DirectionalLight(0xffffff, 1.4); key.position.set(18, 40, 30); scene.add(key);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.left = -35; key.shadow.camera.right = 35;
+key.shadow.camera.top = 40; key.shadow.camera.bottom = -10;
+key.shadow.camera.far = 140;
+key.shadow.bias = -0.0004;
+const fill = new THREE.DirectionalLight(0x5577ff, 0.5); fill.position.set(-30, 10, -20); scene.add(fill);
+const rim = new THREE.PointLight(0xa060ff, 1.6, 140); rim.position.set(6, 26, -30); scene.add(rim);
+const rim2 = new THREE.DirectionalLight(0x3f6cff, 0.9); rim2.position.set(-24, 18, -34); scene.add(rim2);
+const rim3 = new THREE.DirectionalLight(0x18b8c8, 0.45); rim3.position.set(30, 6, -20); scene.add(rim3);
+
+const grid = new THREE.GridHelper(160, 80, 0x1c2436, 0x121826);
+grid.position.y = -0.02;
+scene.add(grid);
+const shadowGround = new THREE.Mesh(new THREE.PlaneGeometry(220, 220),
+  new THREE.ShadowMaterial({ opacity: 0.4 }));
+shadowGround.rotation.x = -Math.PI / 2;
+shadowGround.position.y = -0.015;
+shadowGround.receiveShadow = true;
+scene.add(shadowGround);
+
+/* ---------- registries ---------- */
+const interactives = [];   // raycastable meshes
+const labelSprites = [];   // dimmable / fading labels
+const leftUnits = [];      // ordered column items (left tower)
+const rightUnits = [];     // ordered column items (right main column)
+const vitUnits = [];       // right vision mini-column
+const rails = [];          // dynamically spanned rails
+let selectedConcept = null;
+let camAnim = null;
+const tweens = [];
+
+const COLORS = {
+  dense: 0x4f7cff, cross: 0x5a7d9a, swa: 0x18b8a8,
+  full: 0x9a6bff, reindex: 0xe07a3d, reuse: 0x6f66a8,
+  ffn: 0x2aa876, moeDormant: 0x1d4c3d, moeShared: 0x35c98a,
+  engram: 0xffcf40, kv: 0xffcf40, out: 0xff8d5c, vit: 0x2f8fd0, mhc: 0x18b8c8,
+};
+
+function makeBlock({ x = 0, y = 0, z = 0, w, h, d, color, concept, side, label, tip,
+  pW = 0, aW = 0, gap = 0.06, emissiveBoost = 0.12 }) {
+  const r = Math.min(0.14, h / 2.1, w / 2.1, d / 2.1);
+  const geo = new RoundedBoxGeometry(w, h, d, 2, r);
+  const mat = new THREE.MeshStandardMaterial({
+    color, roughness: 0.42, metalness: 0.25,
+    emissive: new THREE.Color(color).multiplyScalar(emissiveBoost),
+    transparent: true, opacity: 1,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.position.set(x, y + h / 2, z);
+  mesh.userData = { concept, side, label, tip, baseColor: color,
+    baseEmissive: mat.emissive.clone(), h0: h, pW, aW, gap, curY: y + h / 2 };
+  scene.add(mesh);
+  interactives.push(mesh);
+  // selection outline: straight box edges, hidden until the concept is highlighted
+  const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w * 1.02, h * 1.06, d * 1.02)),
+    new THREE.LineBasicMaterial({ color: 0xdff2ff, transparent: true, opacity: 0.55,
+      blending: THREE.AdditiveBlending, depthTest: false }));
+  outline.visible = false;
+  mesh.add(outline);
+  mesh.userData.outline = outline;
+  return mesh;
+}
+
+function makeLabel(text, { follow = null, off = new THREE.Vector3(), pos = null,
+  size = 2.6, color = '#c8d2e4', sub = null, concept = null, side = null, align = 'center', hideable = false } = {}) {
+  const pad = 6, fs = 44, lh = fs * 1.25;
+  const lines = [text, ...(sub ? [sub] : [])];
+  // measure text so the canvas (and sprite) hugs the glyphs — oversized canvases
+  // make centered sprites straddle geometry with half their blank width
+  const mctx = document.createElement('canvas').getContext('2d');
+  mctx.font = `600 ${fs}px 'Segoe UI', Arial, sans-serif`;
+  let wpx = mctx.measureText(text).width;
+  if (sub) { mctx.font = `400 ${fs * 0.62}px 'Segoe UI', Arial, sans-serif`; wpx = Math.max(wpx, mctx.measureText(sub).width); }
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.ceil(wpx + pad * 2);
+  canvas.height = Math.round(lh * lines.length + pad * 2 + (sub ? 10 : 0));
+  const ctx = canvas.getContext('2d');
+  ctx.font = `600 ${fs}px 'Segoe UI', Arial, sans-serif`;
+  ctx.fillStyle = color; ctx.textBaseline = 'top';
+  ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 12;
+  ctx.fillText(text, pad, pad);
+  if (sub) { ctx.font = `400 ${fs * 0.62}px 'Segoe UI', Arial, sans-serif`; ctx.fillStyle = '#77839a'; ctx.fillText(sub, pad, pad + lh + 4); }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.anisotropy = 4;
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false }));
+  const aspect = canvas.width / canvas.height;
+  spr.scale.set(size * aspect, size, 1);
+  const alignDX = align === 'left' ? (size * aspect) / 2 : align === 'right' ? -(size * aspect) / 2 : 0;
+  if (follow) spr.position.copy(follow.position).add(off).add(new THREE.Vector3(alignDX, 0, 0));
+  else spr.position.copy(pos);
+  spr.userData = { follow, off, alignDX, hideable, concept, side, hlOp: 1, text,
+    baseW: size * aspect, baseH: size };
+  scene.add(spr);
+  labelSprites.push(spr);
+  return spr;
+}
+
+function makeRail({ x, z, w, color, opacity, from, to, concept, side, label, tip }) {
+  const r = Math.min(0.05, w / 2.2, 0.06);
+  const geo = new RoundedBoxGeometry(w, 1, 0.12, 2, r); // unit height, scaled per frame
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    color, transparent: true, opacity, emissive: new THREE.Color(color).multiplyScalar(0.25), roughness: 0.3 }));
+  mesh.position.set(x, 0, z);
+  mesh.userData = { from, to, concept, side, label, tip,
+    baseColor: color, baseEmissive: new THREE.Color(color).multiplyScalar(0.25) };
+  scene.add(mesh);
+  interactives.push(mesh);
+  rails.push(mesh);
+  return mesh;
+}
+
+const topOf = (m) => m.position.y + (m.userData.h0 * m.scale.y) / 2;
+const bottomOf = (m) => m.position.y - (m.userData.h0 * m.scale.y) / 2;
+
+// every backbone layer carries an MoE block — mark it with a thin strip on the block's
+// right edge so "layer = attention + MoE" is visible without clicking anything
+// (rounded geometry to match the rounded blocks)
+const STRIP_H = 0.30; // all backbone layer blocks use h = 0.30
+const moeStripGeo = new RoundedBoxGeometry(0.36, STRIP_H, 0.6, 3, 0.14); // near pill-shaped ends
+const moeStripMat = new THREE.MeshBasicMaterial({ color: COLORS.ffn, transparent: true, opacity: 0.6 });
+function addMoEStrip(block) {
+  const s = new THREE.Mesh(moeStripGeo, moeStripMat);
+  s.scale.set(1, block.userData.h0 / STRIP_H, 1);
+  s.position.set(3.18, 0, 0);                     // just outside the 6-wide block
+  s.renderOrder = 3;
+  block.add(s);
+  return s;
+}
+
+/* ============================================================
+   LEFT TOWER — Original Transformer (2017)
+   ============================================================ */
+const LX = -13;
+let ly = 0;
+
+function leftBlock(o) { const m = makeBlock({ ...o, x: LX, y: ly, side: 'left' }); ly += m.userData.h0 + m.userData.gap; leftUnits.push(m); return m; }
+
+const lemb = leftBlock({ w: 6, h: 0.9, d: 4, color: COLORS.dense, concept: 'input', gap: 0.25,
+  label: 'Input Embedding + Sinusoidal PE', tip: 'Learned embedding × √512, plus sin/cos positional encoding', pW: 0.02, aW: 0.02 });
+const encFirst = [];
+for (let i = 0; i < 6; i++) {
+  const a = leftBlock({ w: 6, h: 0.42, d: 4, color: COLORS.dense, concept: 'attention', gap: 0.05,
+    label: `Encoder L${i + 1} — Multi-Head Attention`, tip: '8 heads, d_k=64, dense O(n²) self-attention + Add&Norm', pW: 0.00105, aW: 0.00105 });
+  leftBlock({ w: 6, h: 0.42, d: 4, color: COLORS.ffn, concept: 'ffn', gap: 0.13,
+    label: `Encoder L${i + 1} — FFN`, tip: '512 → 2048 → 512, ReLU — 全参数激活', pW: 0.0021, aW: 0.0021 });
+  if (i === 0) encFirst.push(a);
+}
+ly += 0.4;
+const decFirst = [];
+for (let i = 0; i < 6; i++) {
+  const a = leftBlock({ w: 6, h: 0.32, d: 4, color: COLORS.dense, concept: 'attention', gap: 0.04,
+    label: `Decoder L${i + 1} — Masked Self-Attention`, tip: '8-head causal self-attention + Add&Norm', pW: 0.00105, aW: 0.00105 });
+  leftBlock({ w: 6, h: 0.32, d: 4, color: COLORS.cross, concept: 'attention', gap: 0.04,
+    label: `Decoder L${i + 1} — Cross-Attention`, tip: 'Queries attend to encoder output (V4.1 用 CED 投影取代)', pW: 0.00105, aW: 0.00105 });
+  leftBlock({ w: 6, h: 0.32, d: 4, color: COLORS.ffn, concept: 'ffn', gap: 0.24,
+    label: `Decoder L${i + 1} — FFN`, tip: '512 → 2048 → 512, ReLU + Add&Norm', pW: 0.0021, aW: 0.0021 });
+  if (i === 0) decFirst.push(a);
+}
+ly += 0.4;
+const lout = leftBlock({ w: 6, h: 0.9, d: 4, color: COLORS.out, concept: 'output', gap: 0,
+  label: 'Linear + Softmax', tip: 'Final projection to vocab; autoregressive decode, one token per pass', pW: 0.01, aW: 0.01 });
+
+// ghost KV rail — paired anchor for the kvcache concept on the left tower
+const lkv = makeRail({ x: LX - 3.8, z: -2.15, w: 0.7, color: COLORS.kv, opacity: 0.15,
+  from: encFirst[0], to: lout, concept: 'kvcache', side: 'left',
+  label: 'Naive K/V cache(每层每头,≈36 KB/token)', tip: '2017 论文未涉及 KV cache;朴素部署缓存所有层所有头的 K、V,随层数线性增长' });
+
+// left labels
+makeLabel('Input Embedding + PE', { follow: lemb, off: new THREE.Vector3(-3.4, 0.05, 0), size: 1.3, align: 'right', concept: 'input', side: 'left' });
+makeLabel('Encoder ×6', { follow: encFirst[0], off: new THREE.Vector3(-3.4, 0.85, 0), size: 1.5, sub: 'MHA(8h) + FFN(2048)', align: 'right', concept: 'attention', side: 'left' });
+makeLabel('Decoder ×6', { follow: decFirst[0], off: new THREE.Vector3(-3.4, 0.5, 0), size: 1.5, sub: 'Masked MHA + Cross-Attn + FFN', align: 'right', concept: 'attention', side: 'left' });
+makeLabel('Linear + Softmax', { follow: lout, off: new THREE.Vector3(0, 1.6, 2.0), size: 1.3, concept: 'output', side: 'left' });
+makeLabel('Naive KV ≈36 KB/tok', { follow: lout, off: new THREE.Vector3(-3.4, 0, 0), size: 1.1, align: 'right', concept: 'kvcache', side: 'left' });
+const leftTitle = makeLabel('Original Transformer · 2017', { follow: lout, off: new THREE.Vector3(0, 3.45, 0), size: 2.2, sub: '6+6 layers · d=512 · 65M(base)/213M(big)' });
+
+/* ============================================================
+   RIGHT TOWER — DeepSeek-V4.1-Flash (2026)
+   ============================================================ */
+const RX = 13;
+let ry = 0;
+const W = { }; // tower param totals (approx, B)
+
+function rightBlock(o, list = rightUnits) { const m = makeBlock({ x: RX, ...o, y: ry, side: 'right' }); ry += m.userData.h0 + m.userData.gap; list.push(m); return m; }
+
+// Vision mini-column (separate x, own y-flow)
+const VX = RX - 15;
+let vy = 0;
+function vitBlock(o) { const m = makeBlock({ ...o, x: VX, y: vy, side: 'right' }); vy += m.userData.h0 + m.userData.gap; vitUnits.push(m); return m; }
+let vLast = null;
+for (let i = 0; i < 6; i++) {
+  vLast = vitBlock({ w: 2.6, h: 0.26, d: 2.6, color: COLORS.vit, concept: 'input', gap: 0.08,
+    label: `DeepSeek-ViT layer group ${i + 1}/6 (共32层)`, tip: 'Hidden 1024, 16 heads, patch 14, 2D-RoPE, RMSNorm + SwiGLU — 仅 prefill 激活', pW: 0.058, aW: 0.058 });
+}
+const vProj = vitBlock({ w: 2.6, h: 0.4, d: 2.6, color: COLORS.vit, concept: 'input', gap: 0,
+  label: '3×3 Pixel-Unshuffle + MLP Projector', tip: '9× visual-token reduction; projector 2 layers, hidden 5120', pW: 0.02, aW: 0.02 });
+makeLabel('DeepSeek-ViT ×32', { follow: vProj, off: new THREE.Vector3(0, 1.15, 0), size: 1.2, sub: '图像编码器', concept: 'input', side: 'right' });
+
+// main column
+const remb = rightBlock({ w: 6, h: 0.7, d: 4, color: COLORS.dense, concept: 'input', gap: 0.2,
+  label: 'Text / Image Embedding', tip: 'Merged visual embeddings enter as inputs_embeds before mHC expansion', pW: 1.5, aW: 1.5 });
+makeLabel('Embeddings + mHC', { follow: remb, off: new THREE.Vector3(3.4, 0.05, 1.8), size: 1.2, align: 'left', concept: 'input', side: 'right' });
+
+const rmhc = rightBlock({ w: 6, h: 0.4, d: 4, color: COLORS.mhc, concept: 'residual', gap: 0.2,
+  label: 'Single-Pass mHC(×4 residual streams)', tip: '4 parallel streams; A/B/C coefficients from the stream, 20 Sinkhorn iterations; fused by Mega-mHC kernel', pW: 0.1, aW: 0.1 });
+
+// L0-1 SWA
+const swaBlocks = [];
+for (let i = 0; i < 2; i++) {
+  const b = rightBlock({ w: 6, h: 0.30, d: 4, color: COLORS.swa, concept: 'attention',
+    label: `Encoder L${i} — SWA only`, tip: 'Sliding-window attention, window 128; 前两层无全局分支', pW: 13.5, aW: 0.4 });
+  b.userData.kind = 'swa';
+  b.userData.layerNo = i;
+  addMoEStrip(b);
+  swaBlocks.push(b);
+}
+makeLabel('L0–1 · SWA', { follow: swaBlocks[1], off: new THREE.Vector3(3.4, 0.1, 1.8), size: 1.0, align: 'left', hideable: true, concept: 'attention', side: 'right' });
+
+// Engram @ L1 (after SWA L1 in flow)
+const eng1 = rightBlock({ x: RX - 4.6, w: 1.5, h: 0.55, d: 2.8, color: COLORS.engram, concept: 'memory', gap: 0.15, emissiveBoost: 0.3,
+  label: 'Engram module @ L1', tip: '196B-param n-gram hash memory: orders {2,3,4}, 8 hash heads, dim 2048; learned gate; RDMA-prefetched', pW: 98.3, aW: 0.003 });
+makeLabel('Engram · 196B', { follow: eng1, off: new THREE.Vector3(-1.05, 0, 1.4), size: 1.0, align: 'right', concept: 'memory', side: 'right' });
+
+// Encoder L2-19: CSA2 m=2, 3 groups of 6
+const encGroupsLast = [];
+for (let g = 0; g < 3; g++) {
+  for (let j = 0; j < 6; j++) {
+    const full = j === 0;
+    const b = rightBlock({ w: 6, h: 0.30, d: 4, color: full ? COLORS.full : COLORS.reuse, concept: 'sparse',
+      label: `Encoder L${2 + g * 6 + j} — CSA2 m=2 · ${full ? 'Full mode' : 'Reuse mode'}`,
+      tip: full ? 'Computes its own main KV + indexer K/Q + fresh Top-512 indices'
+        : 'Reuses main KV, indexer K and Top-K indices from the group\'s Full layer; own Q + SWA KV only',
+      pW: 13.5, aW: 0.4 });
+    b.userData.kind = full ? 'full' : 'reuse';
+    b.userData.m = 2;
+    b.userData.layerNo = 2 + g * 6 + j;
+    if (full && g === 1) {
+      // Engram @ L14 sits inside encoder group 2 (layer 14)
+    }
+    addMoEStrip(b);
+    encGroupsLast.push(b);
+  }
+  const last = encGroupsLast[encGroupsLast.length - 1];
+  makeLabel(`G${g + 1} · Full + 5×Reuse`, { follow: last, off: new THREE.Vector3(3.4, 0.05, 1.8), size: 0.95, align: 'left', hideable: true, concept: 'sparse', side: 'right' });
+}
+
+// Engram @ L14 — attach visually after encoder layer 14 (index 12+... L14 = 13th CSA2 layer)
+// insert Engram2 as its own side unit right after the anchor in flow order
+const eng2anchor = rightUnits.find(m => m.userData.label.startsWith('Encoder L14'));
+// insert Engram2 as its own side unit right after the anchor in flow order
+const eng2 = rightBlock({ x: RX - 4.6, w: 1.5, h: 0.55, d: 2.8, color: COLORS.engram, concept: 'memory', gap: 0.15, emissiveBoost: 0.3,
+  label: 'Engram module @ L14', tip: '第二块 196B n-gram 记忆;与 L1 模块均衡分布在流水线阶段', pW: 98.3, aW: 0.003 });
+// move eng2 in the flow order to right after anchor
+rightUnits.splice(rightUnits.indexOf(eng2), 1);
+rightUnits.splice(rightUnits.indexOf(eng2anchor) + 1, 0, eng2);
+makeLabel('Engram · 196B', { follow: eng2, off: new THREE.Vector3(-1.05, 0, 1.4), size: 1.0, align: 'right', concept: 'memory', side: 'right' });
+
+// CED boundary plane
+const ced = rightBlock({ w: 6.0, h: 0.14, d: 4.4, color: COLORS.engram, concept: 'kvcache', gap: 0.26, emissiveBoost: 0.5,
+  label: 'CED boundary — H₂₀(最后编码器隐状态)', tip: 'Decoder layer l > 20 gets global KV as C_l = H₂₀·W_lKV — prefill 只跑下面 20 层', pW: 0, aW: 0 });
+makeLabel('CED · KV_l = H₂₀ W_lKV', { follow: ced, off: new THREE.Vector3(3.4, -1.5, 1.8), size: 0.9, sub: 'decoder KV from encoder output', align: 'left', concept: 'kvcache', side: 'right' });
+
+// Decoder L20-39: CSA2 m=1, 5 groups of 4
+const decGroupLasts = [];
+const decBlocks = [];
+for (let g = 0; g < 5; g++) {
+  for (let j = 0; j < 4; j++) {
+    const mode = j === 0 ? (g === 0 ? 'Full' : 'Reindex') : 'Reuse';
+    const color = mode === 'Full' ? COLORS.full : mode === 'Reindex' ? COLORS.reindex : COLORS.reuse;
+    const tip = mode === 'Full' ? 'Computes own main KV from H₂₀ + indexer → Top-512; also builds the hierarchical candidate pool (2048 blocks × 8 = 16,384 positions)'
+      : mode === 'Reindex' ? 'Reuses main KV + indexer K; its own indexer Q rescores only the candidate pool → fresh Top-512'
+      : 'Reuses main KV and the latest Top-K indices; no indexer compute at all';
+    const b = rightBlock({ w: 6, h: 0.30, d: 4, color, concept: 'sparse',
+      label: `Decoder L${20 + g * 4 + j} — CSA2 m=1 · ${mode} mode`, tip, pW: 13.5, aW: 0.4 });
+    b.userData.decoder = true;
+    b.userData.kind = mode === 'Full' ? 'full' : mode === 'Reindex' ? 'reindex' : 'reuse';
+    b.userData.m = 1;
+    b.userData.layerNo = 20 + g * 4 + j;
+    addMoEStrip(b);
+    decBlocks.push(b);
+    if (j === 3) decGroupLasts.push(b);
+  }
+}
+decGroupLasts.forEach((b, g) => makeLabel(`G${g + 1} · ${g === 0 ? 'Full' : 'Reindex'} + 3×Reuse`,
+  { follow: b, off: new THREE.Vector3(3.4, 0.05, 1.8), size: 0.95, align: 'left', hideable: true, concept: 'sparse', side: 'right' }));
+// (head now sits directly on the decoder stack — no artificial gap needed)
+decGroupLasts[4].userData.gap = 0.06;
+
+// LM head sits directly on the decoder stack (no vertical hole in the tower column)
+const rhead = rightBlock({ w: 6, h: 0.7, d: 4, color: COLORS.out, concept: 'output', gap: 0.1,
+  label: 'LM Head (BF16) + confidence-scheduled verify', tip: 'DSpark verification length chosen dynamically from profiled throughput curves', pW: 1.5, aW: 1.5 });
+makeLabel('LM Head · BF16', { follow: rhead, off: new THREE.Vector3(0, 1.35, 2.0), size: 1.2, concept: 'output', side: 'right' });
+const rightTitle = makeLabel('DeepSeek-V4.1-Flash · 2026', { follow: rhead, off: new THREE.Vector3(0, 3.15, 0), size: 2.2, sub: '40 layers (CED) · 552B · 8B/16B active' });
+
+// DSpark ×3 floats beside/above the head on the label-free left side (does not consume tower flow height)
+let dLast = null, dFirst = null;
+for (let i = 0; i < 3; i++) {
+  const d = rightBlock({ x: RX - 4.6, w: 2.2, h: 0.34, d: 2.6, color: COLORS.out, concept: 'output', gap: 0.08,
+    label: `DSpark drafter block ${i + 1}/3`, tip: 'SWA window 128; one pass drafts 5 tokens semi-autoregressively; Markov + confidence heads', pW: 1.7, aW: 0.5 });
+  if (i === 0) dFirst = d;
+  dLast = d;
+}
+dLast.userData.gap = 0;
+makeLabel('DSpark ×3', { follow: dLast, off: new THREE.Vector3(-1.5, 0.15, 1.4), size: 1.0, sub: '读 L37–39 · 起草 5 token', align: 'right', concept: 'output', side: 'right' });
+
+// rails: mHC ×4 + FP4 KV rail
+for (let r = 0; r < 4; r++) {
+  makeRail({ x: RX - 2.4 + r * 1.6, z: -2.15, w: 0.5, color: COLORS.mhc, opacity: 0.22,
+    from: rmhc, to: rhead, concept: 'residual', side: 'right',
+    label: 'mHC residual streams (×4)', tip: 'Single-Pass mHC: combine matrix doubly stochastic via Sinkhorn-Knopp' });
+}
+const kvRail = makeRail({ x: RX + 3.6, z: -2.15, w: 1.0, color: COLORS.kv, opacity: 0.3,
+  from: rmhc, to: rhead, concept: 'kvcache', side: 'right',
+  label: 'FP4 Main KV Cache — 890 B/token', tip: 'MXFP4 E2M1 after RoPE; only Full/Reindex layers materialize main KV; SWA stays FP8' });
+makeLabel('FP4 KV · 890 B/tok', { follow: rhead, off: new THREE.Vector3(3.4, 0.7, 0), size: 0.9, align: 'left', concept: 'kvcache', side: 'right' });
+
+/* ---------- MoE expert field (384 routed + 1 shared) ---------- */
+const MOE_COLS = 24, MOE_ROWS = 16, CELL = 0.26, STEP = 0.34;
+const MOE_X0 = RX - 2.2, MOE_Z0 = 5.2;
+const ACTIVE = new Set([17, 58, 121, 199, 264, 341]);
+const CELL_ACTIVE = 0x51e6a8, CELL_DIM = 0x16323f;
+const cellGeo = new RoundedBoxGeometry(CELL, CELL, CELL, 2, 0.05);
+const cellsMat = new THREE.MeshStandardMaterial({
+  color: 0xffffff, roughness: 0.45, metalness: 0.2,
+  emissive: new THREE.Color(0x0a2a1e), transparent: true, opacity: 1 });
+const cellsCount = MOE_COLS * MOE_ROWS;
+const cells = new THREE.InstancedMesh(cellGeo, cellsMat, cellsCount);
+cells.castShadow = true; cells.receiveShadow = true;
+cells.userData = { concept: 'ffn', side: 'right', isInstanced: true, baseEmissive: cellsMat.emissive.clone() };
+const _cellDummy = new THREE.Object3D();
+const cellBaseColors = [], cellDimColors = [];
+for (let i = 0; i < cellsCount; i++) {
+  _cellDummy.position.set(MOE_X0 + (i % MOE_COLS) * STEP, CELL / 2, MOE_Z0 + Math.floor(i / MOE_COLS) * STEP);
+  _cellDummy.updateMatrix();
+  cells.setMatrixAt(i, _cellDummy.matrix);
+  const base = new THREE.Color(ACTIVE.has(i) ? CELL_ACTIVE : CELL_DIM);
+  cells.setColorAt(i, base);
+  cellBaseColors.push(base.clone());
+  cellDimColors.push(base.clone().multiplyScalar(0.2));
+}
+cells.instanceMatrix.needsUpdate = true;
+cells.instanceColor.needsUpdate = true;
+scene.add(cells);
+interactives.push(cells);
+let cellLiftId = null, cellLift = 0;
+function setCellMatrix(i, dy) {
+  _cellDummy.position.set(MOE_X0 + (i % MOE_COLS) * STEP, CELL / 2 + dy, MOE_Z0 + Math.floor(i / MOE_COLS) * STEP);
+  _cellDummy.updateMatrix();
+  cells.setMatrixAt(i, _cellDummy.matrix);
+}
+function updateCellColors() {
+  const eff = hoverConcept || selectedConcept;
+  const dim = !!eff && eff !== 'ffn';
+  cellsMat.opacity = dim ? 0.15 : 1;
+  const src = dim ? cellDimColors : cellBaseColors;
+  for (let i = 0; i < cellsCount; i++) cells.setColorAt(i, src[i]);
+  cells.instanceColor.needsUpdate = true;
+}
+const sharedMat = new THREE.MeshStandardMaterial({
+  color: COLORS.moeShared, roughness: 0.4, metalness: 0.2,
+  emissive: new THREE.Color(COLORS.moeShared).multiplyScalar(0.5), transparent: true, opacity: 1 });
+const sharedCell = new THREE.Mesh(new RoundedBoxGeometry(CELL * 1.4, CELL * 1.4, CELL * 1.4, 2, 0.06), sharedMat);
+sharedCell.position.set(MOE_X0 - 1.2, CELL * 0.7, MOE_Z0 - 0.8);
+sharedCell.userData = { concept: 'ffn', side: 'right', baseColor: COLORS.moeShared,
+  baseEmissive: sharedMat.emissive.clone(), h0: CELL * 1.4, curY: CELL * 0.7,
+  label: 'Shared expert — always active', tip: '共享专家:每个 token 恒定激活(1/1)' };
+scene.add(sharedCell); interactives.push(sharedCell);
+makeLabel('DeepSeekMoE · 384 routed(6 active)+ 1 shared', {
+  pos: new THREE.Vector3(MOE_X0 + 0.2, -0.75, MOE_Z0 + 7.0),
+  size: 1.25, sub: '每层一组 · 亮格 = 本 token 激活', concept: 'ffn', side: 'right' });
+
+/* ---------- (real shadow-mapped lighting replaces fake contact shadows) ---------- */
+
+/* ============================================================
+   Relation wires (§2.3.1 reuse, §2.2 CED, §2.4.3 DSpark, §2.1.1 ViT)
+   Thin tubes instead of GL lines: GL lines are always 1px wide and alias
+   badly; tube geometry has real thickness and gets proper antialiasing.
+   ============================================================ */
+const WIRE_R = 0.045;
+const REL_Z = 2.3;
+const UP = new THREE.Vector3(0, 1, 0);
+const wireUnit = new THREE.CylinderGeometry(WIRE_R, WIRE_R, 1, 8, 1);
+const arrowUnit = new THREE.ConeGeometry(WIRE_R * 2.3, WIRE_R * 7, 10);
+const wires = [];
+const wireMats = {};
+const wireMat = (hex) => (wireMats[hex] ??= new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: 0.92 }));
+function addWire(group, hex, a, b, arrow = false) {
+  const mat = wireMat(hex);
+  const mesh = new THREE.Mesh(wireUnit, mat);
+  mesh.frustumCulled = false; mesh.renderOrder = 6;
+  scene.add(mesh);
+  let tip = null;
+  if (arrow) {
+    tip = new THREE.Mesh(arrowUnit, mat);
+    tip.frustumCulled = false; tip.renderOrder = 6;
+    scene.add(tip);
+  }
+  wires.push({ group, mesh, tip, a, b });
+}
+const wireGroups = { sparse: false, kvcache: false, memory: false, input: true };
+let showAllLines = false;
+const yOf = (m) => m.userData.curY;
+const topOfM = (m) => m.userData.curY + (m.userData.h0 * m.scale.y) / 2;
+
+// reuse brackets: encoder 3 groups of 6, decoder 5 groups of 4
+const BX = RX + 2.65;
+for (let g = 0; g < 3; g++) {
+  const grp = encGroupsLast.slice(g * 6, g * 6 + 6);
+  addWire('sparse', COLORS.full, v => v.set(BX, yOf(grp[0]), REL_Z), v => v.set(BX, yOf(grp[5]), REL_Z));
+  for (const m of grp) addWire('sparse', COLORS.full, v => v.set(BX - 0.4, yOf(m), REL_Z), v => v.set(BX, yOf(m), REL_Z));
+}
+for (let g = 0; g < 5; g++) {
+  const grp = decBlocks.slice(g * 4, g * 4 + 4);
+  const col = g === 0 ? COLORS.full : COLORS.reindex;
+  addWire('sparse', col, v => v.set(BX, yOf(grp[0]), REL_Z), v => v.set(BX, yOf(grp[3]), REL_Z));
+  for (const m of grp) addWire('sparse', col, v => v.set(BX - 0.4, yOf(m), REL_Z), v => v.set(BX, yOf(m), REL_Z));
+}
+// CED plane → decoder global-KV projections
+const KX = RX + 3.1;
+for (const t of [decBlocks[0], decBlocks[4], decBlocks[8], decBlocks[12], decBlocks[16]]) {
+  addWire('kvcache', COLORS.kv, v => v.set(KX, yOf(ced), REL_Z), v => v.set(KX, yOf(t), REL_Z), true);
+}
+// Engram modules → residual stream
+for (const e of [eng1, eng2]) {
+  addWire('memory', COLORS.engram, v => v.set(e.position.x + 0.8, yOf(e), 0.7), v => v.set(RX - 3.0, yOf(e), 0.7), true);
+}
+// (DSpark wiring removed: the tap/verify relationship stays as text in the label
+//  "读 L37–39 · 起草 5 token" instead of extra wires on the tower)
+// vision tower → text embedding flow (bezier, 10 segments)
+{
+  const SEG = 10;
+  const P = (t, v) => {
+    const x0 = VX, y0 = topOfM(vProj) + 0.15, x1 = RX - 3.0, y1 = remb.userData.curY;
+    const cx = (x0 + x1) / 2, cy = Math.max(y0, y1) + 1.8;
+    const mt = 1 - t;
+    return v.set(mt * mt * x0 + 2 * mt * t * cx + t * t * x1,
+      mt * mt * y0 + 2 * mt * t * cy + t * t * y1, 0);
+  };
+  for (let s = 0; s < SEG; s++) addWire('input', COLORS.vit, v => P(s / SEG, v), v => P((s + 1) / SEG, v), s === SEG - 1);
+}
+
+const _wp1 = new THREE.Vector3(), _wp2 = new THREE.Vector3(), _wd = new THREE.Vector3();
+function updateRelLines() {
+  const eff = selectedConcept;
+  wireGroups.sparse = true; // group structure (1 Full + N Reuse) visible by default — it IS the CSA2 story
+  wireGroups.kvcache = showAllLines || eff === 'kvcache';
+  wireGroups.memory = showAllLines || eff === 'memory';
+  wireGroups.input = true;   // vision → embedding flow stays on
+  for (const w of wires) {
+    const vis = wireGroups[w.group];
+    if (!vis) { w.mesh.visible = false; if (w.tip) w.tip.visible = false; continue; }
+    const p1 = w.a(_wp1), p2 = w.b(_wp2);
+    _wd.subVectors(p2, p1);
+    const len = _wd.length();
+    if (len < 1e-3) { w.mesh.visible = false; if (w.tip) w.tip.visible = false; continue; }
+    const n = _wd.divideScalar(len);
+    const shrink = w.tip ? WIRE_R * 8 : 0;
+    const seg = Math.max(len - shrink, 0.001);
+    w.mesh.visible = true;
+    w.mesh.quaternion.setFromUnitVectors(UP, n);
+    w.mesh.position.copy(p1).addScaledVector(n, seg / 2);
+    w.mesh.scale.set(1, seg, 1);
+    if (w.tip) {
+      w.tip.visible = true;
+      w.tip.quaternion.setFromUnitVectors(UP, n);
+      w.tip.position.copy(p1).addScaledVector(n, len - WIRE_R * 3.5);
+    }
+  }
+}
+
+/* ============================================================
+   Layout engine — 按层 / 按参数 / 按激活
+   ============================================================ */
+let mode = 'layer';
+
+function towerBudget(units) { return units.reduce((s, u) => s + u.userData.h0, 0); }
+
+function computeLayout(units, budgetH, weightTotal) {
+  // returns [{y, h}] honoring min clamp then rescaled to budgetH
+  let hs = units.map(u => {
+    if (mode === 'layer') return u.userData.h0;
+    const w = mode === 'active' ? u.userData.aW : u.userData.pW;
+    return Math.max(0.05, (w / weightTotal) * budgetH);
+  });
+  if (mode !== 'layer') {
+    const s = hs.reduce((a, b) => a + b, 0);
+    hs = hs.map(h => (h * budgetH) / s);
+  }
+  let y = 0;
+  return hs.map((h, i) => { const r = { y, h }; y += h + units[i].userData.gap; return r; });
+}
+
+function applyLayout() {
+  const budgetR = towerBudget(rightUnits);
+  const weightR = (() => { const saved = mode; const w = rightUnits.reduce((s, u) => s + (mode === 'active' ? u.userData.aW : u.userData.pW), 0)
+    + vitUnits.reduce((s, u) => s + (mode === 'active' ? u.userData.aW : u.userData.pW), 0); return w; })();
+  const budgetL = towerBudget(leftUnits);
+  const weightL = leftUnits.reduce((s, u) => s + (mode === 'active' ? u.userData.aW : u.userData.pW), 0);
+
+  const layoutL = computeLayout(leftUnits, budgetL, weightL || 1);
+  const layoutR = computeLayout(rightUnits, budgetR, weightR || 1);
+  const layoutV = computeLayout(vitUnits, towerBudget(vitUnits), weightR || 1);
+
+  const commit = (units, layout) => units.forEach((u, i) => {
+    const { y, h } = layout[i];
+    if (mode === 'layer') { // snap
+      u.scale.y = h / u.userData.h0;
+      u.userData.curY = y + h / 2;
+    } else {
+      // bottom-up stagger: each unit starts 20ms after the one below it
+      tweens.push({ mesh: u, y0: u.userData.curY - (u.userData.h0 * u.scale.y) / 2, h0c: u.userData.h0 * u.scale.y, y1: y, h1: h, start: performance.now() + i * 20, dur: 700 });
+    }
+  });
+  commit(leftUnits, layoutL);
+  commit(rightUnits, layoutR);
+  commit(vitUnits, layoutV);
+  if (mode === 'layer') updateDynamic();
+}
+
+function updateDynamic() {
+  for (const rail of rails) {
+    const { from, to } = rail.userData;
+    const y0 = topOf(from), y1 = bottomOf(to);
+    const span = Math.max(0.15, y1 - y0 - 0.1);
+    rail.scale.y = span;
+    rail.position.y = (y0 + y1) / 2;
+  }
+}
+
+function updateModeNote() {
+  document.getElementById('mode-note').textContent = MODE_NOTE[lang][mode];
+}
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mbtn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  updateModeNote();
+  applyLayout();
+  savePrefs();
+  syncHash();
+}
+
+/* ============================================================
+   Interaction
+   ============================================================ */
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const tooltip = document.getElementById('tooltip');
+const SEC = { input: '§2.1.1', posenc: '§4.2.1', attention: '§2.3', sparse: '§2.3.1–2.3.2',
+  ffn: '§2.1 / §4.2.1', residual: '§2.4.1', memory: '§2.4.2', kvcache: '§2.4.4 / §3.2.2', output: '§2.4.3' };
+
+// bilingual tooltip/detail text: structured zh translations + templated layer tips
+function tipFor(u) {
+  if (!u) return '';
+  if (lang === 'en') return u.tipEn || u.tip;
+  if (u.tipZh) return u.tipZh;
+  const l = u.label || '';
+  if (l.includes('Multi-Head Attention')) return '8 头、d_k=64,稠密 O(n²) 自注意力 + Add&Norm';
+  if (l.includes('Masked')) return '8 头因果自注意力 + Add&Norm';
+  if (l.includes('Cross-Attention')) return 'Query 对编码器输出做交叉注意力(V4.1 用 CED 投影替代)';
+  if (l.includes('FFN') && u.side === 'left') return '512 → 2048 → 512,ReLU —— 全参数激活';
+  if (l.includes('SWA only')) return '滑动窗口注意力,窗口 128;前两层无全局分支';
+  if (l.includes('CSA2 m=2 · Full')) return '自算主 KV + indexer K/Q + 新 Top-512 索引';
+  if (l.includes('CSA2 m=1 · Full')) return '从 H₂₀ 计算主 KV + 索引 → Top-512;并建层次化候选池(2048 块 × 8 = 16,384 位)';
+  if (l.includes('Reindex')) return '复用主 KV 与 indexer K;本层 indexer Q 只对候选池重打分 → 新 Top-512';
+  if (l.includes('CSA2') && l.includes('Reuse')) return '复用组内 Full 层的主 KV、indexer K 与 Top-K;本层只算 Q 与 SWA KV';
+  return u.tip;
+}
+const TIP_ZH = [
+  ['Input Embedding + Sinusoidal', '学习式词嵌入 ×√512,加正弦位置编码(编码器/解码器各一份)'],
+  ['Multi-Head Attention', null], // handled by resolver
+  ['Linear + Softmax', '最终投影到词表;自回归解码,每前向一个 token'],
+  ['Text / Image Embedding', '合并后的视觉嵌入以 inputs_embeds 进入,在 mHC 流扩展之前'],
+  ['Single-Pass mHC', '4 条并行残差流;系数 A/B/C 由流自身预测,20 次 Sinkhorn 迭代;Mega-mHC 单 kernel 融合'],
+  ['DeepSeek-ViT layer group', 'hidden 1024、16 头、patch 14、2D-RoPE、RMSNorm+SwiGLU —— 仅 prefill 激活'],
+  ['3×3 Pixel-Unshuffle', '视觉 token 压 9×;投影层 2 层、hidden 5120'],
+  ['Engram module @ L14', '第二块 196B n-gram 记忆;与 L1 模块均衡分布,平衡流水线阶段显存'],
+  ['Engram module @ L1', '196B n-gram 哈希记忆:序 {2,3,4}、8 哈希头、dim 2048;可学习门控写入残差;RDMA 预取'],
+  ['DSpark drafter', 'SWA 窗口 128;单次前向半自回归起草 5 token;Markov + 置信头'],
+  ['LM Head', 'DSpark 验证长度按吞吐曲线动态选择'],
+  ['FP4 Main KV Cache', 'MXFP4 E2M1,RoPE 后量化;仅 Full/Reindex 层物化主 KV;SWA 保持 FP8'],
+  ['mHC residual streams', 'Single-Pass mHC:合并矩阵经 Sinkhorn-Knopp 变双随机'],
+];
+const TIP_EN = [
+  ['Engram module @ L14', 'Second 196B n-gram memory module; balanced across pipeline stages with L1'],
+  ['CED boundary', 'Decoder layer l>20 gets global KV as C_l = H₂₀·W_lKV — prefill runs only the bottom 20 layers'],
+  ['Naive K/V cache', 'The 2017 paper predates KV caching; naive deployments cache K,V for every head of every layer'],
+  ['Shared expert', 'Shared expert: active for every token'],
+];
+for (const m of interactives) {
+  const l = m.userData.label || '';
+  if (!l) continue;
+  const zh = TIP_ZH.find(([p]) => l.startsWith(p));
+  if (zh && zh[1]) m.userData.tipZh = zh[1];
+  const en = TIP_EN.find(([p]) => l.startsWith(p));
+  if (en) m.userData.tipEn = en[1];
+}
+
+let hovered = null;
+let hoveredId = null; // instanceId for the MoE expert field
+
+let phase = 'decode'; // prefill / decode viewing phase (§2.2 CED)
+
+let hoverConcept = null; // hover preview overrides selection visually
+
+function setHighlight() {
+  const eff = walkTargets ? null : (hoverConcept || selectedConcept);
+  for (const m of interactives) {
+    const mat = m.material, o = m.userData.outline;
+    if (walkTargets) { // walkthrough owns the highlight
+      const on = walkTargets.has(m);
+      mat.opacity = on ? 1 : 0.12;
+      mat.emissive.copy(m.userData.baseEmissive).multiplyScalar(on ? 0.6 : 0.15);
+      if (o) o.visible = on;
+      continue;
+    }
+    if (!eff) {
+      mat.opacity = 1;
+      mat.emissive.copy(m.userData.baseEmissive);
+      if (o) o.visible = false;
+    } else if (m.userData.concept === eff) {
+      mat.opacity = 1;
+      mat.emissive.copy(m.userData.baseEmissive).multiplyScalar(0.5);
+      // outline is a selection commitment marker — never shown on hover preview
+      if (o) o.visible = !!selectedConcept && m.userData.concept === selectedConcept;
+    } else {
+      mat.opacity = 0.15;
+      mat.emissive.copy(m.userData.baseEmissive).multiplyScalar(0.2);
+      if (o) o.visible = false;
+    }
+    // prefill phase: decoder global-attention layers are not computed (CED §2.2)
+    if (phase === 'prefill' && m.userData.decoder && m.userData.concept === 'sparse') {
+      mat.opacity = Math.min(mat.opacity, 0.3);
+      if (o) o.visible = false;
+    }
+  }
+  if (typeof updateCellColors === 'function') updateCellColors();
+  for (const s of labelSprites) {
+    if (walkTargets) {
+      s.userData.hlOp = (s.userData.follow && walkTargets.has(s.userData.follow)) ? 1 : 0.08;
+    } else {
+      s.userData.hlOp = (!eff || !s.userData.concept || s.userData.concept === eff) ? 1 : 0.1;
+    }
+  }
+}
+
+function fillColumn(el, data) {
+  el.innerHTML = `<h3>${data.title}</h3><div class="sub">${data.sub}</div><ul>` +
+    data.facts.map(f => `<li>${f}</li>`).join('') + '</ul>';
+}
+
+let lang = 'zh';
+let lastDetail = null;
+const SRC = () => (lang === 'zh' ? CONCEPTS_ZH : CONCEPTS);
+
+function refreshPanel() {
+  if (selectedConcept) {
+    const c = SRC()[selectedConcept];
+    document.getElementById('ptext').textContent = c.title;
+    fillColumn(document.getElementById('col-left'), c.left);
+    fillColumn(document.getElementById('col-right'), c.right);
+  } else {
+    fillOverview();
+  }
+}
+
+function fillOverview() {
+  document.getElementById('ptext').textContent = lang === 'zh' ? '总览 — 点击任意模块' : 'Overview — click any element';
+  fillColumn(document.getElementById('col-left'), SRC().overview.left);
+  fillColumn(document.getElementById('col-right'), SRC().overview.right);
+}
+
+function selectConcept(concept, { showDetail = null } = {}) {
+  selectedConcept = concept;
+  lastDetail = showDetail;
+  hideLayerView();
+  const c = SRC()[concept];
+  document.getElementById('ptext').textContent = c.title;
+  fillColumn(document.getElementById('col-left'), c.left);
+  fillColumn(document.getElementById('col-right'), c.right);
+  document.querySelectorAll('.chip').forEach(ch => ch.classList.toggle('active', ch.dataset.concept === concept));
+  const pd = document.getElementById('pdetail');
+  if (showDetail) { pd.style.display = 'block'; pd.innerHTML = `<b>${showDetail.label}</b> — ${tipFor(showDetail)}`; }
+  else { pd.style.display = 'none'; }
+  setHighlight();
+  syncHash();
+}
+
+// one entry point for "select this element": concept highlight + optional layer cross-section
+function selectElement(u, showDetail) {
+  selectConcept(u.concept, { showDetail });
+  if (u.kind) showLayerView(u);
+}
+
+function focusOn(mesh) {
+  const box = new THREE.Box3().setFromObject(mesh);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = Math.max(box.getSize(new THREE.Vector3()).length(), 2);
+  const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+  const dist = Math.max(size * 2.4, 8);
+  camAnim = { fromPos: camera.position.clone(), toPos: center.clone().add(dir.multiplyScalar(dist)),
+    fromTgt: controls.target.clone(), toTgt: center.clone(), t: 0 };
+}
+
+function flyTo(pos, tgt) {
+  camAnim = { fromPos: camera.position.clone(), toPos: pos.clone(),
+    fromTgt: controls.target.clone(), toTgt: tgt.clone(), t: 0 };
+}
+
+function focusOnInstance(id) {
+  const p = new THREE.Vector3(MOE_X0 + (id % MOE_COLS) * STEP, CELL / 2, MOE_Z0 + Math.floor(id / MOE_COLS) * STEP);
+  const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+  camAnim = { fromPos: camera.position.clone(), toPos: p.clone().add(dir.multiplyScalar(6)),
+    fromTgt: controls.target.clone(), toTgt: p.clone(), t: 0 };
+}
+
+// interactive legend (hover previews the concept, click selects it)
+const LEGEND = [
+  [COLORS.dense, '稠密多头注意力', 'Dense multi-head attention', 'attention'],
+  [COLORS.cross, 'Cross-Attention(仅 2017)', 'Cross-attention (2017 only)', 'attention'],
+  [COLORS.swa, '滑动窗口 SWA(128)', 'Sliding-window SWA (128)', 'attention'],
+  [COLORS.full, 'CSA2 Full(自算 KV + 索引)', 'CSA2 Full (computes KV + index)', 'sparse'],
+  [COLORS.reindex, 'CSA2 Reindex(复用 KV,重打分)', 'CSA2 Reindex (reuse KV, rescore)', 'sparse'],
+  [COLORS.reuse, 'CSA2 Reuse(复用 KV + Top-K)', 'CSA2 Reuse (reuse KV + Top-K)', 'sparse'],
+  [COLORS.ffn, 'FFN / MoE 专家(亮 = 激活)', 'FFN / MoE experts (bright = active)', 'ffn'],
+  [COLORS.ffn, '塔上绿条 = 每层都有 MoE', 'green strip = MoE in every layer', 'ffn'],
+  [COLORS.engram, 'Engram 记忆', 'Engram memory', 'memory'],
+  [COLORS.kv, 'KV 缓存', 'KV cache', 'kvcache'],
+  [COLORS.out, '输出头 / 投机解码', 'Output head / spec decode', 'output'],
+];
+function buildLegend() {
+  const el = document.getElementById('legend');
+  el.innerHTML = '';
+  for (const [hex, zh, en, concept] of LEGEND) {
+    const row = document.createElement('div');
+    row.className = 'lrow'; row.tabIndex = 0; row.setAttribute('role', 'button');
+    const sw = document.createElement('span');
+    sw.className = 'sw'; sw.style.background = '#' + hex.toString(16).padStart(6, '0');
+    const tx = document.createElement('span');
+    tx.textContent = lang === 'zh' ? zh : en;
+    row.append(sw, tx);
+    row.addEventListener('pointerenter', () => { hoverConcept = concept; setHighlight(); });
+    row.addEventListener('pointerleave', () => { hoverConcept = null; setHighlight(); });
+    row.addEventListener('click', () => { selectConcept(concept); flyTo(HOME_POS, HOME_TGT); });
+    row.addEventListener('keydown', ev => { if (ev.key === 'Enter') row.click(); });
+    el.appendChild(row);
+  }
+}
+
+/* ============================================================
+   Per-layer cross-section: what actually happens inside one block
+   ============================================================ */
+const LAYER_SPEC = {
+  swa: {
+    zh: 'SWA 层', en: 'SWA layer',
+    steps: [
+      { t: 'compute', zh: '本层投影出 Q / K / V', en: 'project Q / K / V for this layer', dim: '5120 → 64×512' },
+      { t: 'compute', zh: '滑动窗口注意力:只在最近 128 个 token 内打分', en: 'sliding-window attention over the last 128 tokens', dim: 'n_win = 128' },
+      { t: 'compute', zh: 'MoE:384 路由专家激活 6 个 + 1 共享专家', en: 'MoE: 6 of 384 routed experts + 1 shared', dim: '6/384' },
+      { t: 'compute', zh: 'mHC 残差合并(4 条流,Sinkhorn 双随机)', en: 'mHC residual combine (4 streams, Sinkhorn)', dim: 'n = 4' },
+    ],
+    note: { zh: '前两层没有全局分支 —— 不写全局 KV,也不跑索引器。', en: 'No global branch in the first two layers: no global KV write, no indexer.' },
+  },
+  full: {
+    zh: 'CSA2 Full 层', en: 'CSA2 Full layer',
+    steps: [
+      { t: 'compute', zh: '本层投影出全局 Q', en: 'project the global Q', dim: '64 heads × 512' },
+      { t: 'compute', zh: '主 KV latent:每 m 个 token 压成 1 条', en: 'main KV latent: m tokens → 1 entry', dim: '512 ch, m = {m}' },
+      { t: 'compute', zh: 'indexer K 由主 KV 投影,indexer Q 打分全部可见 KV', en: 'indexer K from main KV; indexer Q scores all visible KV', dim: '32 heads × 128' },
+      { t: 'compute', zh: '选出 Top-512 主 KV 条目', en: 'select Top-512 main-KV entries', dim: 'k = 512' },
+      { t: 'compute', zh: '与 SWA KV 拼接 → 核心注意力 → 输出投影', en: 'concat with SWA KV → core attention → output projection', dim: '8 groups × 1024' },
+      { t: 'write', zh: '写入 FP4 主 KV 缓存(890 B/token 的来源)', en: 'write the FP4 main KV cache (source of the 890 B/token)', dim: 'MXFP4' },
+      { t: 'compute', zh: 'MoE 384 → 6 + 残差', en: 'MoE 384 → 6 + residual', dim: '6/384' },
+    ],
+    note: { zh: '解码器首层还会建层次化候选池(2048 块 × 8 = 16,384 位),后续 Reindex 层只在池内搜索。', en: 'The first decoder Full layer also builds the hierarchical candidate pool (2,048 blocks × 8 = 16,384 positions) that later Reindex layers search.' },
+  },
+  reindex: {
+    zh: 'CSA2 Reindex 层', en: 'CSA2 Reindex layer',
+    steps: [
+      { t: 'reuse', zh: '复用前面 Full 层的主 KV 与 indexer K', en: 'reuse main KV + indexer K from the preceding Full layer', dim: '不新增缓存' },
+      { t: 'compute', zh: '本层自己的 indexer Q 只在候选池内重打分', en: 'own indexer Q rescores only the candidate pool', dim: '≤ 16,384 位' },
+      { t: 'compute', zh: '得到新的 Top-512 选择', en: 'fresh Top-512 selection', dim: 'k = 512' },
+      { t: 'compute', zh: '与 SWA KV 拼接 → 注意力 → 输出投影', en: 'concat with SWA KV → attention → output projection', dim: '' },
+      { t: 'reuse', zh: '不写 KV:缓存不增长', en: 'no KV write: cache does not grow', dim: '' },
+      { t: 'compute', zh: 'MoE 384 → 6 + 残差', en: 'MoE 384 → 6 + residual', dim: '6/384' },
+    ],
+    note: { zh: 'Reindex 让"选的条目"逐层变化,但主 KV 仍然共享 —— 这是缓存不涨、效果变好的关键。', en: 'Reindex lets the selection change per layer while the main KV stays shared — the reason the cache does not grow yet quality holds.' },
+  },
+  reuse: {
+    zh: 'CSA2 Reuse 层', en: 'CSA2 Reuse layer',
+    steps: [
+      { t: 'reuse', zh: '复用前层主 KV', en: 'reuse the main KV', dim: '不新增缓存' },
+      { t: 'reuse', zh: '复用前层算好的 Top-K 索引 —— 完全不跑索引器', en: 'reuse the Top-K indices — no indexer at all', dim: '' },
+      { t: 'compute', zh: '与 SWA KV 拼接 → 注意力 → 输出投影(本层仍有自己的 Q)', en: 'concat with SWA KV → attention → output (own Q per layer)', dim: '' },
+      { t: 'reuse', zh: '不写 KV:缓存不增长', en: 'no KV write: cache does not grow', dim: '' },
+      { t: 'compute', zh: 'MoE 384 → 6 + 残差', en: 'MoE 384 → 6 + residual', dim: '6/384' },
+    ],
+    note: { zh: 'Reuse 层的执行成本最低:prefill 15 个 kernel、decode 11 个。40 层里 33 层是 Reuse。', en: 'Cheapest layer type: 15 kernels in prefill, 11 in decode. 33 of the 40 layers are Reuse.' },
+  },
+};
+
+function showLayerView(u) {
+  const spec = LAYER_SPEC[u.kind];
+  if (!spec) return;
+  const lv = document.getElementById('layer-view');
+  const badge = { compute: ['算', 'calc'], reuse: ['复用', 'reuse'], write: ['写缓存', 'write'] };
+  const mTxt = u.m ? ` · m=${u.m}` : '';
+  lv.innerHTML = `
+    <div class="lv-head">
+      <b>L${u.layerNo} · ${lang === 'zh' ? spec.zh : spec.en}</b>
+      <span>${u.side === 'right' && u.m ? `压缩率 m = ${u.m}` : ''}</span>
+      <span class="lv-back">← ${lang === 'zh' ? '返回概念对照' : 'back to comparison'}</span>
+    </div>` +
+    spec.steps.map(s => `<div class="lstep">
+        <span class="lbadge ${s.t}">${badge[s.t][lang === 'zh' ? 0 : 1]}</span>
+        <span class="ltxt">${lang === 'zh' ? s.zh : s.en}${s.dim ? ` <em>${s.dim.replace('{m}', u.m ?? '')}</em>` : ''}</span>
+      </div>`).join('') +
+    `<div class="lv-note">${lang === 'zh' ? spec.note.zh : spec.note.en}</div>`;
+  lv.style.display = 'block';
+  document.getElementById('panel-cols').style.display = 'none';
+  lv.querySelector('.lv-back').addEventListener('click', hideLayerView);
+}
+function hideLayerView() {
+  document.getElementById('layer-view').style.display = 'none';
+  document.getElementById('panel-cols').style.display = 'grid';
+}
+
+/* ============================================================
+   Token walkthrough: follow one token through the 40-layer pipeline
+   ============================================================ */
+let walkTimer = null, walkIdx = 0, walkTargets = null;
+function buildWalkSteps() {
+  const steps = [];
+  const L = (m) => `L${m.userData.layerNo}`;
+  steps.push({ targets: [remb, rmhc],
+    zh: '嵌入:文本 + 图像并入,残差流扩成 4 条(mHC)',
+    en: 'Embedding: text + images merged, residual expanded into 4 streams (mHC)' });
+  for (const b of swaBlocks) steps.push({ targets: [b],
+    zh: `${L(b)} · SWA:只在最近 128 个 token 内做注意力(无全局分支,不写 KV)`,
+    en: `${L(b)} · SWA: attention within the last 128 tokens only (no global branch, no KV write)` });
+  for (let g = 0; g < 3; g++) {
+    const grp = encGroupsLast.slice(g * 6, g * 6 + 6);
+    steps.push({ targets: [grp[0]],
+      zh: `${L(grp[0])} · Full:算主 KV(每 2 token 压 1 条)+ 索引器 → Top-512,写入 FP4 缓存`,
+      en: `${L(grp[0])} · Full: build main KV (2 tokens → 1 entry) + indexer → Top-512, write FP4 cache` });
+    steps.push({ targets: grp.slice(1),
+      zh: `${L(grp[1])}–${L(grp[5])} · Reuse ×5:复用这组的主 KV 与 Top-K,不写缓存`,
+      en: `${L(grp[1])}–${L(grp[5])} · Reuse ×5: reuse this group's main KV + Top-K, no cache write` });
+  }
+  steps.push({ targets: [ced],
+    zh: 'CED 切分:编码器到此结束。解码器的全局 KV 直接由 H₂₀ 投影 —— prefill 只跑下面 20 层',
+    en: 'CED cut: encoder ends here. Decoder global KV is projected straight from H₂₀ — prefill runs only the bottom 20 layers' });
+  for (let g = 0; g < 5; g++) {
+    const grp = decBlocks.slice(g * 4, g * 4 + 4);
+    steps.push({ targets: [grp[0]],
+      zh: g === 0
+        ? `${L(grp[0])} · Full:从 H₂₀ 算 KV + 索引,并建候选池(2048 块 × 8 = 16,384 位)`
+        : `${L(grp[0])} · Reindex:复用部分的主 KV,自己的索引 Q 只在候选池内重打分`,
+      en: g === 0
+        ? `${L(grp[0])} · Full: KV + index from H₂₀, and build the candidate pool (2,048 × 8 = 16,384 positions)`
+        : `${L(grp[0])} · Reindex: reuse the main KV, own indexer Q rescores only inside the candidate pool` });
+    steps.push({ targets: grp.slice(1),
+      zh: `${L(grp[1])}–${L(grp[3])} · Reuse ×3:复用 KV 与索引(最省:prefill 15 kernel)`,
+      en: `${L(grp[1])}–${L(grp[3])} · Reuse ×3: reuse KV + indices (cheapest: 15 kernels in prefill)` });
+  }
+  steps.push({ targets: [rhead],
+    zh: 'LM head:输出 logits;DSpark 的 5-token 草稿在这里被验证接收',
+    en: 'LM head: emit logits; the 5-token DSpark draft is verified here' });
+  return steps;
+}
+const WALK_STEPS = buildWalkSteps();
+function setWalkBtn(playing) {
+  const b = document.querySelector('#view-btns button[data-view="walk"]');
+  if (!b) return;
+  b.textContent = playing ? (lang === 'zh' ? '⏸ 停止' : 'Stop') : (lang === 'zh' ? '▶ 走一遍' : 'Walk');
+  b.classList.toggle('active', playing);
+}
+function walkStep() {
+  if (walkIdx >= WALK_STEPS.length) { stopWalk(); return; }
+  const s = WALK_STEPS[walkIdx];
+  walkTargets = new Set(s.targets);
+  const cap = document.getElementById('walk-cap');
+  cap.style.display = 'block';
+  cap.innerHTML = `<b>${walkIdx + 1}/${WALK_STEPS.length}</b>${lang === 'zh' ? s.zh : s.en}` +
+    `<span class="wstop">${lang === 'zh' ? 'Esc 停止' : 'Esc to stop'}</span>`;
+  setHighlight();
+  walkIdx++;
+}
+function startWalk() {
+  walkIdx = 0; walkStep();
+  walkTimer = setInterval(walkStep, 1500);
+  setWalkBtn(true);
+}
+function stopWalk() {
+  if (walkTimer) { clearInterval(walkTimer); walkTimer = null; }
+  if (walkTargets) { walkTargets = null; setHighlight(); }
+  document.getElementById('walk-cap').style.display = 'none';
+  setWalkBtn(false);
+}
+
+// nav chips (rebuilt on language switch)
+const pnav = document.getElementById('pnav');
+function buildChips() {
+  pnav.innerHTML = '';
+  for (const [c, zh, en] of NAV) {
+    const chip = document.createElement('span');
+    chip.className = 'chip' + (selectedConcept === c ? ' active' : '');
+    chip.dataset.concept = c;
+    chip.tabIndex = 0;
+    chip.setAttribute('role', 'button');
+    chip.textContent = lang === 'zh' ? zh : en;
+    chip.addEventListener('click', () => { stopTour(); stopWalk(); selectConcept(c); flyTo(HOME_POS, HOME_TGT); });
+    chip.addEventListener('keydown', ev => { if (ev.key === 'Enter') chip.click(); });
+    pnav.appendChild(chip);
+  }
+}
+function setLang(l) {
+  lang = l;
+  document.querySelectorAll('.lbtn').forEach(b => b.classList.toggle('active', b.dataset.lang === l));
+  document.querySelectorAll('[data-zh]').forEach(el => {
+    el.innerHTML = lang === 'zh' ? el.dataset.zh : el.dataset.en;
+  });
+  if (tourTimer) setTourBtn(true);
+  setWalkBtn(!!walkTimer);
+  setQualityBtn();
+  buildLegend();
+  buildChips();
+  refreshPanel();
+  updateModeNote();
+  updateCtx();
+  savePrefs();
+  syncHash();
+}
+document.querySelectorAll('.lbtn').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+// mode buttons
+document.querySelectorAll('.mbtn').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+
+// phase buttons (prefill vs decode, §2.2)
+function setPhase(p) {
+  phase = p;
+  document.querySelectorAll('.pbtn').forEach(b => b.classList.toggle('active', b.dataset.phase === p));
+  setHighlight();
+}
+document.querySelectorAll('.pbtn').forEach(b => b.addEventListener('click', () => setPhase(b.dataset.phase)));
+const prefillLabel = makeLabel('Prefill:仅编码器 20 层 + SWA replay(最近 128 token)',
+  { follow: rhead, off: new THREE.Vector3(3.4, 1.6, 1.8), size: 0.8, align: 'left', concept: 'kvcache', side: 'right' });
+prefillLabel.userData.phaseOnly = true;
+
+// context-length slider → KV cost comparison
+const ctxSlider = document.getElementById('ctx-slider');
+function fmtBytes(b) { return b >= 1073741824 ? (b / 1073741824).toFixed(1) + ' GB' : (b / 1048576).toFixed(0) + ' MB'; }
+function fmtN(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + 'M' : n >= 1024 ? Math.round(n / 1024) + 'K' : String(n); }
+const KV_NAIVE = 36 * 1024, KV_FP4 = 890;                 // bytes per token
+const KV_MAX = 1048576 * KV_NAIVE;                        // left row scale: naive KV @1M
+const KV_RMAX = 1048576 * KV_FP4;                         // right row scale: FP4 KV @1M
+function updateCtx() {
+  const t = ctxSlider.value / 1000;
+  const n = Math.round(4096 * Math.pow(256, t)); // 4K → 1M, log scale
+  const L = n * KV_NAIVE, R = n * KV_FP4;
+  document.getElementById('ctx-val').textContent = fmtN(n) + ' tok';
+  document.getElementById('kv-left').textContent = fmtBytes(L);
+  document.getElementById('kv-right').textContent = fmtBytes(R);
+  // each bar shows its share of that model's own 1M cost — both visibly grow while dragging;
+  // the absolute 41× comparison lives in the number readouts
+  document.getElementById('bar-left').style.width = Math.max(0.4, (L / KV_MAX) * 100).toFixed(2) + '%';
+  document.getElementById('bar-right').style.width = Math.max(0.4, (R / KV_RMAX) * 100).toFixed(2) + '%';
+  document.getElementById('ctx-ratio').textContent = (lang === 'zh' ? '差距 ≈' : 'gap ≈') + ' ' + Math.round(L / R) + '×';
+  document.getElementById('ctx-note').textContent = lang === 'zh'
+    ? '条长 = 各自 1M 成本的占比;890 B/token 仅指 global KV(不含 SWA 常数项与权重,单请求口径)'
+    : 'bar = share of that model\'s own 1M cost; 890 B/token = global KV only (excl. bounded SWA & weights, per request)';
+  document.getElementById('btag-left').textContent = lang === 'zh' ? '2017 朴素 KV' : '2017 naive KV';
+  document.getElementById('btag-right').textContent = 'V4.1 FP4 KV';
+  document.querySelector('#ctx-row .lbl').textContent = lang === 'zh' ? '上下文' : 'Context';
+}
+ctxSlider.addEventListener('input', updateCtx);
+document.getElementById('ctx-head').addEventListener('click', () => {
+  document.getElementById('ctx-wrap').classList.toggle('collapsed');
+});
+
+// render quality toggle (bloom + shadows on/off, for weak GPUs)
+let quality = 'high';
+function setQualityBtn() {
+  const b = document.querySelector('#view-btns button[data-view="quality"]');
+  if (!b) return;
+  b.textContent = lang === 'zh' ? (quality === 'high' ? '画质:高' : '画质:低') : (quality === 'high' ? 'HQ' : 'LQ');
+  b.classList.toggle('active', quality === 'high');
+}
+function toggleQuality() {
+  quality = quality === 'high' ? 'low' : 'high';
+  renderer.shadowMap.enabled = quality === 'high';
+  key.castShadow = quality === 'high';
+  // supersampling is the other half of the cost — drop it on weak GPUs too
+  renderer.setPixelRatio(quality === 'high' ? Math.min(Math.max(devicePixelRatio, 1.5), 2) : 1);
+  composer.setSize(wrap.clientWidth, wrap.clientHeight);
+  renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  scene.traverse(o => { if (o.material) o.material.needsUpdate = true; });
+  setQualityBtn();
+  savePrefs();
+}
+
+// demo tour: cycles the nine concepts every 5s
+let tourTimer = null, tourIdx = 0;
+function setTourBtn(playing) {
+  const b = document.querySelector('#view-btns button[data-view="tour"]');
+  if (!b) return;
+  b.textContent = playing ? (lang === 'zh' ? '⏸ 停止' : 'Stop') : (lang === 'zh' ? '▶ 巡游' : 'Tour');
+  b.classList.toggle('active', playing);
+}
+function stopTour() {
+  if (tourTimer) {
+    clearInterval(tourTimer); tourTimer = null;
+    setTourBtn(false);
+  }
+}
+function toggleTour(btn) {
+  if (tourTimer) { stopTour(); return; }
+  stopWalk();
+  setTourBtn(true);
+  const tick = () => { const [c] = NAV[tourIdx % NAV.length]; tourIdx++; selectConcept(c); flyTo(HOME_POS, HOME_TGT); };
+  tick();
+  tourTimer = setInterval(tick, 5000);
+}
+// view buttons
+document.querySelectorAll('#view-btns button').forEach(b => b.addEventListener('click', () => {
+  const v = b.dataset.view;
+  if (v === 'front') flyTo(HOME_POS, HOME_TGT);
+  else if (v === 'side') flyTo(SIDE_POS, HOME_TGT);
+  else if (v === 'lines') { showAllLines = !showAllLines; b.classList.toggle('active', showAllLines); }
+  else if (v === 'walk') { walkTimer ? stopWalk() : startWalk(); }
+  else if (v === 'quality') toggleQuality();
+  else if (v === 'tour') toggleTour(b);
+  else { // reset
+    stopTour();
+    flyTo(HOME_POS, HOME_TGT); selectedConcept = null; lastDetail = null; hoverConcept = null;
+    setHighlight(); fillOverview(); buildChips();
+    hideLayerView();
+    document.getElementById('pdetail').style.display = 'none';
+    syncHash();
+  }
+}));
+
+addEventListener('pointermove', (e) => {
+  if (e.target instanceof Element && e.target.closest('#panel, #legend, #view-btns, #tooltip')) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(interactives, false);
+  const hit = hits.find(h => h.object.material.opacity > 0.5);
+  const hc = (!walkTargets && hit) ? hit.object.userData.concept : null;
+  if (hc !== hoverConcept) { hoverConcept = hc; setHighlight(); }
+  if (hit) {
+    hovered = hit.object;
+    hoveredId = hit.instanceId ?? null;
+    document.body.style.cursor = 'pointer';
+    const u = hovered.userData;
+    const label = u.isInstanced ? `Routed expert #${hoveredId} — ${ACTIVE.has(hoveredId) ? (lang === 'zh' ? '激活' : 'active') : (lang === 'zh' ? '休眠' : 'dormant')}` : u.label;
+    const tip = u.isInstanced
+      ? (ACTIVE.has(hoveredId)
+          ? (lang === 'zh' ? '本 token 激活的 6/384 个路由专家之一' : 'one of the 6/384 routed experts active for this token')
+          : (lang === 'zh' ? '本 token 休眠的路由专家(378/384)' : 'dormant routed expert (378/384)'))
+      : tipFor(u);
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX + 16) + 'px';
+    tooltip.style.top = (e.clientY + 12) + 'px';
+    const tag = u.side === 'left' ? '<span class="side-tag" style="color:#6ea8ff">Transformer 2017</span>'
+      : '<span class="side-tag" style="color:#b48cff">DeepSeek-V4.1-Flash</span>';
+    tooltip.innerHTML = `${tag}<b>${label}</b><br><span style="color:#8d98ad;font-size:10.5px">${tip}</span>` +
+      (SEC[u.concept] ? `<br><span style="color:#4d576b;font-size:9.5px">${lang === 'zh' ? '技术报告' : 'tech report'} ${SEC[u.concept]}</span>` : '');
+  } else {
+    hovered = null;
+    hoveredId = null;
+    document.body.style.cursor = 'default';
+    tooltip.style.display = 'none';
+  }
+});
+
+addEventListener('click', (e) => {
+  if (e.target.closest('#panel') || e.target.closest('#view-btns')) return;
+  stopWalk();
+  if (hovered) {
+    const u = hovered.userData;
+    const detail = u.isInstanced
+      ? { label: `Routed expert #${hoveredId} — ${ACTIVE.has(hoveredId) ? (lang === 'zh' ? '激活' : 'active') : (lang === 'zh' ? '休眠' : 'dormant')}`,
+          tip: ACTIVE.has(hoveredId)
+            ? (lang === 'zh' ? '本 token 激活的 6/384 个路由专家之一' : 'one of the 6/384 routed experts active for this token')
+            : (lang === 'zh' ? '本 token 休眠的路由专家(378/384)' : 'dormant routed expert (378/384)') }
+      : u;
+    selectElement(u, detail);
+    if (u.isInstanced && hoveredId !== null) focusOnInstance(hoveredId);
+    else focusOn(hovered);
+  } else {
+    selectedConcept = null;
+    setHighlight(); fillOverview();
+    document.querySelectorAll('.chip').forEach(ch => ch.classList.remove('active'));
+    document.getElementById('pdetail').style.display = 'none';
+  }
+});
+
+addEventListener('resize', () => {
+  camera.aspect = wrap.clientWidth / wrap.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  composer.setSize(wrap.clientWidth, wrap.clientHeight);
+});
+
+// first-run "how to read" card (dismissal remembered)
+(function initHowto() {
+  let seen = null;
+  try { seen = localStorage.getItem('dsv41-howto'); } catch {}
+  if (seen === 'done') return;
+  const el = document.getElementById('howto');
+  el.style.display = 'block';
+  document.getElementById('howto-close').addEventListener('click', () => {
+    el.style.display = 'none';
+    try { localStorage.setItem('dsv41-howto', 'done'); } catch {}
+  });
+})();
+
+/* ---------- keyboard navigation ---------- */
+const navList = interactives.filter(m => m.userData.h0 !== undefined && !m.userData.isCell && !m.userData.isInstanced);
+let navIdx = -1;
+addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    stopTour(); stopWalk();
+    selectedConcept = null; lastDetail = null; navIdx = -1; hoverConcept = null;
+    setHighlight(); fillOverview(); buildChips();
+    document.getElementById('pdetail').style.display = 'none';
+    hideLayerView();
+    syncHash();
+  } else if (e.key === 'w' || e.key === 'W') {
+    walkTimer ? stopWalk() : startWalk();
+    e.preventDefault();
+  } else if (e.code === 'Space' && !(e.target instanceof HTMLInputElement)) {
+    document.querySelector('#view-btns button[data-view="tour"]').click();
+    e.preventDefault();
+  } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    navIdx = (navIdx + (e.key === 'ArrowDown' ? 1 : -1) + navList.length) % navList.length;
+    const m = navList[navIdx];
+    selectElement(m.userData, m.userData);
+    focusOn(m);
+    e.preventDefault();
+  }
+});
+
+/* ---------- URL hash state ---------- */
+function syncHash() {
+  const p = new URLSearchParams();
+  if (selectedConcept) p.set('c', selectedConcept);
+  if (mode !== 'layer') p.set('m', mode);
+  if (lang !== 'zh') p.set('l', lang);
+  history.replaceState(null, '', p.toString() ? '#' + p.toString() : location.pathname);
+}
+
+/* ---------- boot (hash > localStorage > defaults) ---------- */
+const PREFS_KEY = 'dsv41-prefs';
+function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify({ lang, mode, quality })); } catch {} }
+(function boot() {
+  let prefs = {};
+  try { prefs = JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch {}
+  const p = new URLSearchParams(location.hash.slice(1));
+  const wantLang = p.get('l') || prefs.lang;
+  if (wantLang === 'en') lang = 'en';
+  document.querySelectorAll('.lbtn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+  document.querySelectorAll('[data-zh]').forEach(el => {
+    el.innerHTML = lang === 'zh' ? el.dataset.zh : el.dataset.en;
+  });
+  if (prefs.quality === 'low') { quality = 'low'; renderer.shadowMap.enabled = false; key.castShadow = false; }
+  setQualityBtn();
+  buildLegend();
+  buildChips();
+  updateModeNote();
+  fillOverview();
+  updateCtx();
+  applyLayout();
+  const m = p.get('m') || prefs.mode;
+  if (m === 'params' || m === 'active') setMode(m);
+  const c = p.get('c');
+  if (c && CONCEPTS[c]) selectConcept(c);
+})();
+
+// debug hook for verification
+window.__layout = () => ({
+  mode,
+  left: leftUnits.map(m => +(m.userData.h0 * m.scale.y).toFixed(3)),
+  right: rightUnits.map(m => +(m.userData.h0 * m.scale.y).toFixed(3)),
+});
+window.__tweens = () => tweens.length;
+window.__err = null;
+window.__geom = () => ({ type: rightUnits[0].geometry.type,
+  params: rightUnits[0].geometry.parameters,
+  camDist: +camera.position.distanceTo(controls.target).toFixed(1) });
+window.__lift = () => +Math.max(0, ...interactives.map(m => m.userData.lift || 0)).toFixed(3);
+window.__outlines = () => interactives.filter(m => m.userData.outline && m.userData.outline.visible).length;
+window.__aa = () => ({
+  pixelRatio: renderer.getPixelRatio(),
+  targetSamples: composerTarget.samples,
+  targetSize: [composerTarget.width, composerTarget.height],
+  canvas: [renderer.domElement.width, renderer.domElement.height],
+});
+window.__strip = () => {
+  const block = rightUnits.find(u => u.userData.label && u.userData.label.includes('SWA only'));
+  const s = block.children.find(c => c.material === moeStripMat);
+  return { verts: s.geometry.attributes.position.count,
+    boxLike: s.geometry.attributes.position.count <= 24,
+    scaleY: +s.scale.y.toFixed(3), localX: +s.position.x.toFixed(2) };
+};
+window.__rel = () => {
+  const by = {};
+  for (const w of wires) { (by[w.group] ??= { n: 0, vis: 0 }); by[w.group].n++; if (w.mesh.visible) by[w.group].vis++; }
+  return by;
+};
+window.__wireSample = () => {
+  const w = wires.find(x => x.group === 'output');
+  const a = new THREE.Vector3(), b = new THREE.Vector3();
+  w.a(a); w.b(b);
+  return { a: a.toArray().map(v => +v.toFixed(2)), b: b.toArray().map(v => +v.toFixed(2)), r: WIRE_R };
+};
+window.__tweenCount = () => tweens.length;
+window.__collide = () => {
+  const hits = [];
+  const mbox = new THREE.Box3();
+  for (const s of labelSprites) {
+    if (!s.visible) continue;
+    const hw = s.scale.x / 2, hh = s.scale.y / 2;
+    const sb = { minx: s.position.x - hw, maxx: s.position.x + hw, miny: s.position.y - hh, maxy: s.position.y + hh };
+    for (const m of interactives) {
+      if (m.userData.h0 === undefined) continue;
+      mbox.setFromObject(m);
+      if (sb.maxx > mbox.min.x && sb.minx < mbox.max.x && sb.maxy > mbox.min.y && sb.miny < mbox.max.y
+        && (s.position.z > mbox.min.z - 0.5)) {
+        hits.push({ label: s.userData.text, mesh: m.userData.label?.slice(0, 28) });
+      }
+    }
+  }
+  // label vs label (front view x/y overlap)
+  for (let i = 0; i < labelSprites.length; i++) {
+    const a = labelSprites[i]; if (!a.visible) continue;
+    const ab = { minx: a.position.x - a.scale.x / 2, maxx: a.position.x + a.scale.x / 2, miny: a.position.y - a.scale.y / 2, maxy: a.position.y + a.scale.y / 2 };
+    for (let j = i + 1; j < labelSprites.length; j++) {
+      const b = labelSprites[j]; if (!b.visible) continue;
+      const bb = { minx: b.position.x - b.scale.x / 2, maxx: b.position.x + b.scale.x / 2, miny: b.position.y - b.scale.y / 2, maxy: b.position.y + b.scale.y / 2 };
+      if (ab.maxx > bb.minx && ab.minx < bb.maxx && ab.maxy > bb.miny && ab.miny < bb.maxy)
+        hits.push({ label: a.userData.text, mesh: 'LABEL:' + b.userData.text });
+    }
+  }
+  return hits;
+};
+window.__labels = () => labelSprites.map(s => {
+  const v = s.position.clone().project(camera);
+  return { txt: s.image?.width, x: +v.x.toFixed(2), y: +v.y.toFixed(2), vis: s.visible, op: +s.material.opacity.toFixed(2) };
+});
+window.__opac = () => {
+  const by = {};
+  for (const m of interactives) {
+    const c = m.userData.concept;
+    (by[c] ??= []).push(+m.material.opacity.toFixed(2));
+  }
+  return by;
+};
+
+/* ---------- animate: rAF when visible, timer backstop when throttled ---------- */
+const clock = new THREE.Clock();
+let lastStep = 0;
+function step() {
+  lastStep = performance.now();
+ try {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (camAnim) {
+    camAnim.t = Math.min(camAnim.t + dt * 1.8, 1);
+    const k = 1 - Math.pow(1 - camAnim.t, 3);
+    camera.position.lerpVectors(camAnim.fromPos, camAnim.toPos, k);
+    controls.target.lerpVectors(camAnim.fromTgt, camAnim.toTgt, k);
+    if (camAnim.t >= 1) camAnim = null;
+  }
+  // height tweens
+  const now = performance.now();
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const t = tweens[i];
+    const p = Math.max(0, Math.min((now - t.start) / t.dur, 1));
+    if (p <= 0) continue; // staggered: not started yet
+    const k = 1 - Math.pow(1 - p, 3);
+    const h = t.h0c + (t.h1 - t.h0c) * k;
+    const y = t.y0 + (t.y1 - t.y0) * k;
+    t.mesh.scale.y = h / t.mesh.userData.h0;
+    t.mesh.userData.curY = y + h / 2;
+    if (p >= 1) tweens.splice(i, 1);
+  }
+  // hover micro-lift: hovered block rises and widens slightly
+  for (const m of interactives) {
+    if (m.userData.curY === undefined) continue;
+    const target = m === hovered ? 1 : 0;
+    const L = (m.userData.lift || 0) + (target - (m.userData.lift || 0)) * Math.min(1, dt * 10);
+    m.userData.lift = L;
+    m.position.y = m.userData.curY + L * 0.12;
+    m.scale.x = 1 + L * 0.03;
+    m.scale.z = 1 + L * 0.03;
+  }
+  // instanced expert-field hover lift
+  {
+    const targetId = hovered === cells ? hoveredId : null;
+    if (cellLiftId !== null && cellLiftId !== targetId) { setCellMatrix(cellLiftId, 0); cellLiftId = null; }
+    cellLift += ((targetId !== null ? 1 : 0) - cellLift) * Math.min(1, dt * 10);
+    if (targetId !== null) { setCellMatrix(targetId, cellLift * 0.12); cellLiftId = targetId; }
+    if (cellLiftId !== null || cellLift > 0.01) cells.instanceMatrix.needsUpdate = true;
+  }
+  updateDynamic();
+  updateRelLines();
+  // labels: follow anchors, distance fade, highlight dim
+  const backFade = THREE.MathUtils.clamp((camera.position.z + 12) / 10, 0, 1); // fade labels when orbiting behind
+  for (const s of labelSprites) {
+    if (s.userData.follow) s.position.copy(s.userData.follow.position).add(s.userData.off);
+    const dist = camera.position.distanceTo(s.position);
+    const k = dist / 60; // reference distance: labels keep constant on-screen size
+    if (s.userData.follow) s.position.x += s.userData.alignDX * k;
+    s.scale.set(s.userData.baseW * k, s.userData.baseH * k, 1);
+    const fade = THREE.MathUtils.clamp((dist - 9) / 7, 0, 1);
+    s.material.opacity = fade * backFade * s.userData.hlOp
+      * (s.userData.hideable && mode !== 'layer' ? 0 : 1)
+      * (s.userData.phaseOnly ? (phase === 'prefill' ? 1 : 0) : 1);
+    s.visible = s.material.opacity > 0.02;
+  }
+  controls.update();
+  if (quality === 'high') composer.render();
+  else renderer.render(scene, camera);
+ } catch (e) { window.__err = String(e); }
+}
+function animate() { requestAnimationFrame(animate); step(); }
+animate();
+// backstop: hidden/throttled tabs get zero rAF frames — drive the loop with timers
+setInterval(() => { if (performance.now() - lastStep > 120) step(); }, 33);
+</script>
+</body>
+</html>
