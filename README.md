@@ -103,6 +103,10 @@ docs/                      screenshots
 - The viewer keeps a few `window.__*` hooks used for layout/collision verification
   during development.
 
+<p align="center">
+  <a href="https://github.com/oil-oil/beautify-github-readme"><img src="./assets/readme/made-with-beautify.svg" width="300" alt="README made with beautify-github-readme"></a>
+</p>
+
 ## License
 
 MIT — see [LICENSE](LICENSE). Vendored three.js files remain under their own MIT
