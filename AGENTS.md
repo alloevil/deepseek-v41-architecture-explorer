@@ -30,4 +30,10 @@
 - 新增运行时依赖(现状只有 vendored three.js r160)
 - 重新生成 `docs/*.webp`(需渲染后肉眼确认,再用视觉检查复核)
 
+## 数字与宣称
+
+正文（README、docs、发布说明）里出现的每个数字,要么在 `claims.json` 里有一条机检 claim(命令从已提交的数据独立重算),要么有一条 `manual` claim 写明缺哪个产物、为什么复算不了。推之前跑 `verify-claims --root . run`;只改数字不改 claim,CI 会在几分钟后替你发现(`claims.yml`)。
+
+不确定还有哪些数字没人认领,跑 `verify-claims --root . coverage`:它列出正文里没有 claim 的数字——是待办清单,不是判定。
+
 <!-- 这是起点:agent 犯一次错就补一条边界,定期跑 verify.py 与 agentsmd-lint。 -->
