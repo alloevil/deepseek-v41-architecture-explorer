@@ -14,4 +14,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: alloevil/verify-claims@v0.1.0
+      - uses: alloevil/verify-claims@v0.1.1
