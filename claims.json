@@ -2,7 +2,7 @@
   "$comment": "Receipts for every number the viewer displays. Each entry carries the verbatim sentence from the technical report it came from; verify.py enforces that index.html still matches. Numbers the report does not publish are listed under removed_claims and must stay out.",
   "project": "deepseek-v41-architecture-explorer",
   "checked_on": "2026-09-11",
-  "updated": "2026-09-13",
+  "updated": "2026-09-14",
   "source": {
     "title": "DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression",
     "publisher": "DeepSeek-AI",
@@ -11,7 +11,7 @@
     "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf",
     "sha256": "ba68e2e40408125ae6d2f63a9a241b61c73910691c74ec1a2a7023c851eac08d",
     "model_card": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash",
-    "how_to_recheck": "curl -sL -o /tmp/ds41.pdf '<url>' && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -i '<quote from this file>'"
+    "how_to_recheck": "curl -sL -o /tmp/ds41.pdf '<url>' && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -i '<quote from this file>'; the machine checks read the committed excerpts in docs/snapshots/deepseek-v41-tech-report-2026-09-14.md instead, so run this only to refresh that snapshot (confirm the sha256, replace the excerpts, bump as_of)"
   },
   "baseline_source": {
     "title": "Attention Is All You Need",
@@ -78,10 +78,10 @@
       "claim": "552B backbone parameters.",
       "value": "552B backbone parameters",
       "metric": "reported backbone parameter total",
-      "method": "The viewer prints 552B in the right tower's title and the README hero figure repeats it, but nothing in the repository computes it: the pW weights in index.html are the documented per-block approximations that only drive the 'by parameters' scale mode (README, Caveats).",
+      "method": "The viewer prints 552B in the right tower's title and in the stat bar, and the README hero figure repeats it; the pW weights in index.html are the documented per-block approximations that only drive the 'by parameters' scale mode (README, Caveats). The check re-derives the number from the committed snapshot of the report's §2.1/1 sentence and requires the page's total-params stat to carry the same number. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F '552B backbone parameters'",
       "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §2.1 Overview (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "as_of": "2026-09-14",
       "source": {
         "section": "2.1 Overview",
         "quote": "DeepSeek-V4.1-Flash has 552B backbone parameters"
@@ -93,7 +93,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "the 552B backbone total is the report's own count (§2.1) and the 51-page PDF is not committed here (URL + sha256 only); the per-block weights in index.html are documented scale-mode approximations, not a parameter breakdown, so no offline command can recompute it"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"DeepSeek-V4.1-Flash has 552B backbone parameters\";r=re.search(r\"DeepSeek-V4\\.1-Flash has (\\d+)B backbone parameters\",S);v=re.findall(r\"<b>(\\d+)B</b><span data-zh=\\\"\\u603b\\u53c2\\\"\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"%sB backbone\"%r.groups();V=\"%sB\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: 552B backbone | viewer: 552B | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -101,12 +105,12 @@
       "claim": "8B activated per token in prefill, 16B in decode.",
       "value": "8B activated per token in prefill, 16B in decode",
       "metric": "reported activated parameters per token, per phase",
-      "method": "Printed in the right tower's title ('40 layers (CED) · 552B · 8B/16B active') and in the viewer's FFN fact column. The aW weights in index.html are the same documented approximations for the 'by activation' scale mode, not an activation count.",
+      "method": "Printed in the right tower's title ('40 layers (CED) · 552B · 8B/16B active') and in the viewer's FFN fact column. The aW weights in index.html are the same documented approximations for the 'by activation' scale mode, not an activation count. The check re-derives 8B/16B from the committed snapshot of the §1 sentence (§2.1 restates the same split) and requires the page's prefill/decode line to carry that pair. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'activate 8B parameters per token'",
-      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §2.1 Overview (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §1 Introduction (§2.1 restates the 8B/16B split) (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-14",
       "source": {
-        "section": "2.1 Overview",
+        "section": "1 Introduction (§2.1 restates the 8B/16B split)",
         "quote": "This design enables the model to activate 8B parameters per token during prefill and 16B during decode"
       },
       "viewer": {
@@ -116,7 +120,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "the 8B/16B activation counts are report figures (§2.1); the PDF is not committed and the viewer's aW weights are scale-mode approximations, so nothing here recomputes them"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"This design enables the model to activate 8B parameters per token during prefill and 16B during decode\";r=re.search(r\"activate (\\d+)B parameters per token during prefill and (\\d+)B during decode\",S);v=re.findall(r\"prefill\\s*\\u6fc0\\u6d3b\\s*(\\d+)B\\s*/\\s*\\u89e3\\u7801\\s*(\\d+)B\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"prefill %sB / decode %sB\"%r.groups();V=\"prefill %sB / decode %sB\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: prefill 8B / decode 16B | viewer: prefill 8B / decode 16B | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -153,12 +161,12 @@
       "claim": "Persistent KV cache ~1/8 of V4-Flash via SWA Bounded Replay.",
       "value": "persistent KV ≈ 1/8 of V4-Flash",
       "metric": "reported ratio of persistent (SSD/host) KV cache footprint to DeepSeek-V4-Flash's",
-      "method": "Quoted from §3.2.2 and printed in the viewer's KV fact column. Neither DeepSeek-V4-Flash's persistent footprint nor the SWA Bounded Replay arithmetic that produces the ratio is committed here.",
+      "method": "Quoted from the report's §6 Conclusion (the same ratio appears in §1) and printed in the viewer's KV fact column as '1/8 of V4-Flash'; §3.2.2 describes the SWA Bounded Replay mechanism but prints no ratio. The check re-derives 1/8 from the committed snapshot and requires the page's persistent-footprint line to carry it. DeepSeek-V4-Flash's own persistent footprint, and the replay arithmetic behind the ratio, are still not recomputed here. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'roughly 1/8'",
-      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §3.2.2 SWA Bounded Replay (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §6 Conclusion (§1 states the same 1/8) (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-14",
       "source": {
-        "section": "3.2.2 SWA Bounded Replay",
+        "section": "6 Conclusion (§1 states the same 1/8)",
         "quote": "reduces its persistent KV cache footprint (always on SSD or in host memory) to roughly 1/8 of that of DeepSeek-V4-Flash"
       },
       "viewer": {
@@ -168,7 +176,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "the 1/8 ratio compares against DeepSeek-V4-Flash's persistent footprint (§3.2.2), which is not published in this repository and not vendored from the report PDF"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"reduces its persistent KV cache footprint (always on SSD or in host memory) to roughly 1/8 of that of DeepSeek-V4-Flash\";r=re.search(r\"persistent KV cache footprint \\(always on SSD or in host memory\\) to roughly (1/\\d+) of that of DeepSeek-V4-Flash\",S);v=re.findall(r\"persistent footprint\\s*\\u2248\\s*<b>(1/\\d+)\\s*of V4-Flash</b>\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"%s of V4-Flash persistent KV\"%r.groups();V=\"%s of V4-Flash\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: 1/8 of V4-Flash persistent KV | viewer: 1/8 of V4-Flash | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -176,10 +188,10 @@
       "claim": "~437x smaller per-token global KV than DeepSeek-V1.",
       "value": "~437x smaller per-token global KV than DeepSeek-V1",
       "metric": "reported ratio of per-token global KV cache size to DeepSeek-V1's",
-      "method": "Quoted from the Figure 1 caption and printed in the viewer ('1/437'). The repository's only per-token baseline is the viewer's own 2017-Transformer arithmetic (36 KB/token, labelled as derived); DeepSeek-V1's footprint is nowhere here.",
+      "method": "Quoted from the Figure 1 caption and printed in the viewer ('1/4 of V4-Flash, 1/437 of V1'). The check re-derives both ratios from the committed snapshot and requires the page's global-KV line to carry them. The repository's only other per-token baseline is the viewer's own 2017-Transformer arithmetic (36 KB/token, labelled as derived); DeepSeek-V1's footprint is still nowhere here. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F '437-fold'",
       "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — Figure 1 caption (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "as_of": "2026-09-14",
       "source": {
         "section": "Figure 1 caption",
         "quote": "achieves approximately 4-fold and 437-fold reductions in per-token global KV cache size relative to DeepSeek-V4-Flash and DeepSeek-V1"
@@ -191,7 +203,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "the 437-fold ratio compares against DeepSeek-V1's per-token footprint (Figure 1), which appears nowhere in this repository"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"achieves approximately 4-fold and 437-fold reductions in per-token global KV cache size relative to DeepSeek-V4-Flash and DeepSeek-V1\";r=re.search(r\"approximately (\\d+)-fold and (\\d+)-fold reductions in per-token global KV cache size relative to DeepSeek-V4-Flash and DeepSeek-V1\",S);v=re.findall(r\"\\(1/(\\d+)\\s*of V4-Flash,\\s*1/(\\d+)\\s*of V1\\)\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"%s-fold vs V4-Flash, %s-fold vs V1\"%r.groups();V=\"1/%s of V4-Flash, 1/%s of V1\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: 4-fold vs V4-Flash, 437-fold vs V1 | viewer: 1/4 of V4-Flash, 1/437 of V1 | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -199,10 +215,10 @@
       "claim": "MXFP4 E2M1 with one E4M3 scale per 16 channels.",
       "value": "MXFP4 E2M1, one E4M3 scale per 16 channels",
       "metric": "reported FP4 quantisation format of the main KV cache",
-      "method": "A format specification quoted from §2.4.4 into the viewer's text (tooltips say 'MXFP4 E2M1 after RoPE'). No committed artifact encodes or computes the format or its channel count.",
+      "method": "A format specification quoted from §2.4.4 into the viewer's text (tooltips say 'MXFP4 E2M1 after RoPE'). The check re-derives the format name and the channel count from the committed snapshot and requires the page's FP4 line to carry E2M1/E4M3 per 16 channels. No committed artifact encodes or computes the format itself. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'E2M1 with one E4M3 scale per 16 channels'",
       "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §2.4.4 FP4 Main KV Cache (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "as_of": "2026-09-14",
       "source": {
         "section": "2.4.4 FP4 Main KV Cache",
         "quote": "we select E2M1 with one E4M3 scale per 16 channels"
@@ -215,7 +231,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "a quantisation-format spec quoted from §2.4.4; the PDF is not committed, and no code or data here encodes MXFP4 E2M1 or the 16-channel group size"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"we select E2M1 with one E4M3 scale per 16 channels\";r=re.search(r\"select (E2M1) with one (E4M3) scale per (\\d+) channels\",S);v=re.findall(r\"MXFP4\\s*(E2M1)\\u3001\\u6bcf\\s*(\\d+)\\s*\\u901a\\u9053\\u4e00\\u4e2a\\s*(E4M3)\\s*scale\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);W=tuple(W[i-1] for i in (1, 3, 2));R=\"%s, one %s scale per %s channels\"%r.groups();V=\"MXFP4 %s, one %s scale per %s channels\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: E2M1, one E4M3 scale per 16 channels | viewer: MXFP4 E2M1, one E4M3 scale per 16 channels | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -223,10 +243,10 @@
       "claim": "The cache is quantized after RoPE.",
       "value": "the cache is quantized after RoPE",
       "metric": "qualitative statement about where quantisation sits in the pipeline",
-      "method": "A mechanism statement with no figure, quoted from §2.4.4: the viewer states it and this file keeps the sentence, but there is no number for a command to recompute.",
+      "method": "A mechanism statement with no figure, quoted from §2.4.4. The check requires both that the committed snapshot carries 'We quantize the cache after RoPE' (with the rejected 'quantizing before RoPE' variant still present) and that the page still states the same ordering — a text-level assertion, not a number. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'quantize the cache after RoPE'",
       "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §2.4.4 FP4 Main KV Cache (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "as_of": "2026-09-14",
       "source": {
         "section": "2.4.4 FP4 Main KV Cache",
         "quote": "We quantize the cache after RoPE"
@@ -238,7 +258,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "a mechanism statement with no figure; there is nothing offline to recompute"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"We quantize the cache after RoPE\";Q2=\"quantizing before RoPE\";print(\"report: %s present: %s, %s present: %s | viewer: RoPE-after-quant stated: %s | match: %s\"%(Q,Q in S,Q2,Q2 in S,\"RoPE 之后量化\" in H,Q in S and Q2 in S and \"RoPE 之后量化\" in H))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: We quantize the cache after RoPE present: True, quantizing before RoPE present: True | viewer: RoPE-after-quant stated: True | match: True"
+        }
       }
     },
     {
@@ -246,10 +270,10 @@
       "claim": "SWA window n_win = 128 in every layer.",
       "value": "n_win = 128 tokens, every layer",
       "metric": "reported sliding-window size",
-      "method": "Quoted from §4.2.1 and printed throughout the viewer (tooltips, LAYER_SPEC dim 'n_win = 128', walkthrough captions). 128 appears only as displayed text: no constant in index.html is derived from the window, so nothing offline recomputes it.",
+      "method": "Quoted from §4.2.1 and printed throughout the viewer (tooltips, LAYER_SPEC dim 'n_win = 128', walkthrough captions). The check re-derives 128 from the committed snapshot and requires the page's n_win dim to carry the same value; index.html still derives nothing from the window, because the page never runs attention. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'the window size'",
       "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.1 Model Setups (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "as_of": "2026-09-14",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "the window size 𝑛win is set to 128"
@@ -261,7 +285,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "128 is the report's §4.2.1 window size, printed in the viewer as text only; the PDF is not committed and no constant or derived value in the repository depends on it"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"the window size 𝑛win is set to 128\";r=re.search(r\"window size \\S+ is set to (\\d+)\",S);v=re.findall(r\"n_win\\s*=\\s*(\\d+)\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"n_win = %s\"%r.groups();V=\"n_win = %s\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: n_win = 128 | viewer: n_win = 128 | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -378,10 +406,10 @@
       "claim": "Sparse attention reads Top-512 main KV entries per query.",
       "value": "Top-512 main KV entries read per query",
       "metric": "reported number of KV entries selected for sparse attention",
-      "method": "Quoted from §4.2.1 and printed by the viewer ('Top-512', LAYER_SPEC dim 'k = 512'). index.html derives nothing from it — the viewer never selects entries.",
+      "method": "Quoted from §4.2.1 and printed by the viewer ('Top-512', LAYER_SPEC dim 'k = 512'). The check re-derives 512 from the committed snapshot and requires the page's 'Top-512 main KV entries per query' line to carry it; index.html derives nothing from it, because the viewer never selects entries. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'attention top-k'",
       "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.1 Model Setups (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "as_of": "2026-09-14",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "the number of KV entries selected for sparse attention (i.e., attention top-k) to 512"
@@ -393,7 +421,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "Top-512 is a §4.2.1 model-setup value printed as text; the viewer never selects KV entries, so nothing derives it"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"the number of KV entries selected for sparse attention (i.e., attention top-k) to 512\";r=re.search(r\"attention top-k\\) to (\\d+)\",S);v=re.findall(r\"<b>Top-(\\d+)</b>\\s*\\u4e3b\\s*KV\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"attention top-k = %s\"%r.groups();V=\"Top-%s main KV entries per query\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: attention top-k = 512 | viewer: Top-512 main KV entries per query | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -428,10 +460,10 @@
       "claim": "64 query heads, head dim 512, query compression dim 1280.",
       "value": "64 query heads, head dim 512, query compression dim 1280",
       "metric": "reported attention head configuration",
-      "method": "Quoted from §4.2.1 and printed in the viewer (CONCEPTS header '64 q-heads · head dim 512 · q-compress 1280', LAYER_SPEC dims). No committed artifact computes head counts or dimensions.",
+      "method": "Quoted from §4.2.1 and printed in the viewer (CONCEPTS header '64 q-heads · head dim 512 · q-compress 1280', LAYER_SPEC dims). The check re-derives the three numbers from the committed snapshot and requires the page's attention header to carry the same triple; no committed artifact computes head geometry. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'number of query heads to 64'",
       "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.1 Model Setups (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "as_of": "2026-09-14",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "We set the number of query heads to 64, the head dimension to 512, and the query compression dimension to 1280."
@@ -443,7 +475,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "the head count, head dim and query-compression dim are §4.2.1 model-setup values printed as text; no committed artifact computes them"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"We set the number of query heads to 64, the head dimension to 512, and the query compression dimension to 1280.\";r=re.search(r\"query heads to (\\d+), the head dimension to (\\d+), and the query compression dimension to (\\d+)\",S);v=re.findall(r\"(\\d+)\\s*q-\\u5934\\s*\\u00b7\\s*head dim\\s*(\\d+)\\s*\\u00b7\\s*q\\s*\\u538b\\u7f29\\s*(\\d+)\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"%s q-heads, head dim %s, q-compress %s\"%r.groups();V=\"%s q-heads, head dim %s, q-compress %s\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: 64 q-heads, head dim 512, q-compress 1280 | viewer: 64 q-heads, head dim 512, q-compress 1280 | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -451,10 +487,10 @@
       "claim": "Indexer: 32 query heads, head dim 128.",
       "value": "indexer: 32 query heads, head dim 128",
       "metric": "reported sparse-indexer head configuration",
-      "method": "Quoted from §4.2.1 and printed in the viewer's attention column ('Indexer: 32 heads, dim 128'); nothing in the repository derives it.",
+      "method": "Quoted from §4.2.1 and printed in the viewer's attention column. The check re-derives 32/128 from the committed snapshot and requires the page's indexer line to carry them; nothing in the repository derives the indexer geometry. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'indexer query heads to 32'",
       "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.1 Model Setups (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "as_of": "2026-09-14",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "we set the number of indexer query heads to 32, the indexer head dimension to 128"
@@ -466,7 +502,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "the indexer head count and dim are §4.2.1 model-setup values printed as text; nothing in the repository computes them"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"we set the number of indexer query heads to 32, the indexer head dimension to 128\";r=re.search(r\"number of indexer query heads to (\\d+), the indexer head dimension to (\\d+)\",S);v=re.findall(r\"\\u7d22\\u5f15\\u5668\\s*(\\d+)\\s*\\u5934\\u3001dim\\s*(\\d+)\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"indexer %s heads, dim %s\"%r.groups();V=\"indexer %s heads, dim %s\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: indexer 32 heads, dim 128 | viewer: indexer 32 heads, dim 128 | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -529,10 +569,10 @@
       "claim": "Engram: 196B parameters in two modules.",
       "value": "196B parameters across two modules",
       "metric": "reported Engram parameter total",
-      "method": "Quoted from §2.4.2 and printed in the viewer ('Engram · 196B'). The two Engram blocks in index.html carry pW 98.3 each (documented approximations for the scale modes, summing to 196.6), so no committed artifact reproduces the report's 196B.",
+      "method": "Quoted from §2.4.2 and printed in the viewer ('Engram · 196B'). The two Engram blocks in index.html carry pW 98.3 each — the documented approximations for the scale modes, summing to 196.6, not the report's 196B. The check re-derives 196 from the committed snapshot and requires the page's Engram label to carry it. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'We allocate 196B Engram parameters'",
       "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §2.4.2 Engram (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "as_of": "2026-09-14",
       "source": {
         "section": "2.4.2 Engram",
         "quote": "We allocate 196B Engram parameters evenly across two modules."
@@ -544,7 +584,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "196B is the report's Engram total (§2.4.2) and the PDF is not committed; the two Engram blocks in index.html carry scale-mode approximations (98.3 each) that do not reproduce it"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"We allocate 196B Engram parameters evenly across two modules.\";r=re.search(r\"We allocate (\\d+)B Engram parameters evenly across two modules\",S);v=re.findall(r\"Engram\\s*\\u00b7\\s*(\\d+)B\\s*params at layers\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"%sB across two modules\"%r.groups();V=\"Engram · %sB\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: 196B across two modules | viewer: Engram · 196B | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -607,10 +651,10 @@
       "claim": "DeepSeek-ViT: 32 layers, hidden 1024, 16 heads, patch 14.",
       "value": "DeepSeek-ViT: 32 layers, hidden 1024, 16 heads, patch 14",
       "metric": "reported vision-encoder configuration",
-      "method": "Quoted from §4.2.1 and printed in the viewer ('DeepSeek-ViT ×32', 'hidden 1024, 16 heads, patch 14'). The ViT mini-column draws six labelled groups and computes none of these numbers.",
+      "method": "Quoted from §4.2.1 and printed in the viewer ('32 层、hidden 1024、16 头、patch 14'). The ViT mini-column draws six labelled groups and computes none of these numbers. The check re-derives all four from the committed snapshot and requires the page's ViT line to carry them. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'number of layers to 32'",
       "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.1 Model Setups (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "as_of": "2026-09-14",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "we set its number of layers to 32, the hidden dimension to 1024, the number of attention heads to 16, and the image patch size to 14"
@@ -622,7 +666,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "the ViT layer/width/head/patch numbers are §4.2.1 model-setup values printed as text; the viewer's ViT column is six labelled groups"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"we set its number of layers to 32, the hidden dimension to 1024, the number of attention heads to 16, and the image patch size to 14\";r=re.search(r\"number of layers to (\\d+), the hidden dimension to (\\d+), the number of attention heads to (\\d+), and the image patch size to (\\d+)\",S);v=re.findall(r\"(\\d+)\\s*\\u5c42\\u3001hidden\\s*(\\d+)\\u3001(\\d+)\\s*\\u5934\\u3001patch\\s*(\\d+)\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"ViT %s layers, hidden %s, %s heads, patch %s\"%r.groups();V=\"%s layers, hidden %s, %s heads, patch %s\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: ViT 32 layers, hidden 1024, 16 heads, patch 14 | viewer: 32 layers, hidden 1024, 16 heads, patch 14 | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -630,12 +678,12 @@
       "claim": "Images up to ~1344x1344 px via 3x3 pixel-unshuffle.",
       "value": "images up to ~1344x1344 px",
       "metric": "reported input resolution bound",
-      "method": "Quoted from §2.2 and printed in the viewer's input column; the viewer models no image resolutions, so nothing recomputes it.",
+      "method": "Quoted from §2.1.1 (the vision-encoder paragraph) and printed in the viewer's input column; the viewer models no image resolutions. The check re-derives 1344 x 1344 from the committed snapshot and requires the page's resolution line to carry it. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'approximately 1344'",
-      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §2.2 Vision encoder (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §2.1.1 Multimodal Architecture (vision-encoder paragraph) (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-14",
       "source": {
-        "section": "2.2 Vision encoder",
+        "section": "2.1.1 Multimodal Architecture (vision-encoder paragraph)",
         "quote": "supporting input resolutions up to approximately 1344 × 1344 pixels"
       },
       "viewer": {
@@ -645,7 +693,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "the ~1344x1344 bound is a §2.2 value printed as text; the viewer models no resolutions"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"supporting input resolutions up to approximately 1344 × 1344 pixels\";r=re.search(r\"approximately (\\d+) \\u00d7 (\\d+) pixels\",S);v=re.findall(r\"\\u5355\\u56fe\\u6700\\u5927\\u7ea6\\s*(\\d+)\\u00d7(\\d+)\\s*px\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"up to ~%sx%s px\"%r.groups();V=\"up to ~%sx%s px\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: up to ~1344x1344 px | viewer: up to ~1344x1344 px | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -653,10 +705,10 @@
       "claim": "Reasoning effort is continuously controllable, integer 1-100.",
       "value": "reasoning effort is continuously controllable, integer 1–100",
       "metric": "reported effort range",
-      "method": "Quoted from §5.1.4 and printed in the viewer's output column ('连续可调(整数 1–100)'). No committed artifact bounds anything at 1–100: the only slider in the page is the KV-cost context slider.",
+      "method": "Quoted from §5.1.4 and printed in the viewer's output column. No committed artifact bounds anything at 1–100: the only slider in the page is the KV-cost context slider. The check re-derives the bounds from the committed snapshot and requires the page's effort line to carry the same range. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'higher values request more'",
       "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §5.1.4 Controllable Reasoning Effort in RL (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "as_of": "2026-09-14",
       "source": {
         "section": "5.1.4 Controllable Reasoning Effort in RL",
         "quote": "Reasoning Effort:           {effort} (range 1–100; higher values request more"
@@ -668,7 +720,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "the 1–100 effort range is a §5.1.4 value printed as text; no committed artifact constrains an effort parameter"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"Reasoning Effort: {effort} (range 1–100; higher values request more\";r=re.search(r\"range (\\d+)\\u2013(\\d+); higher values request more\",S);v=re.findall(r\"\\u8fde\\u7eed\\u53ef\\u8c03\\(\\u6574\\u6570\\s*(\\d+)\\u2013(\\d+)\\)\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"effort range %s-%s\"%r.groups();V=\"continuous integer %s-%s\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: effort range 1-100 | viewer: continuous integer 1-100 | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -676,10 +732,10 @@
       "claim": "Trained on a multimodal corpus of 45T tokens.",
       "value": "trained on a multimodal corpus of 45T tokens",
       "metric": "reported pre-training corpus size",
-      "method": "Quoted from §1 and printed in the viewer's overview column and the README hero figure; nothing in the repository counts tokens.",
+      "method": "Quoted from §1 and printed in the viewer's overview column and in the README hero figure. The check re-derives 45 from the committed snapshot and requires the page's corpus line to carry it; nothing in the repository counts tokens. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'multimodal corpus comprising 45T tokens'",
       "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §1 Introduction (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "as_of": "2026-09-14",
       "source": {
         "section": "1 Introduction",
         "quote": "multimodal corpus comprising 45T tokens"
@@ -691,7 +747,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "45T is §1's corpus size, printed in the viewer and in the README hero figure; no committed artifact counts tokens"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"multimodal corpus comprising 45T tokens\";r=re.search(r\"multimodal corpus comprising (\\d+)T tokens\",S);v=re.findall(r\"\\u00b7\\s*(\\d+)T\\s*tokens\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"%sT-token corpus\"%r.groups();V=\"%sT tokens\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: 45T-token corpus | viewer: 45T tokens | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -699,12 +759,12 @@
       "claim": "Sparse attention trained from scratch at 64K, no dense warmup.",
       "value": "sparse attention trained from scratch at 64K, no dense warmup",
       "metric": "reported training-stage statement",
-      "method": "Quoted from §4.2.2 and printed in the viewer's positional column. It is a training-schedule statement (64K context, no dense warmup) with no committed artifact behind it.",
+      "method": "Quoted from §1, which summarises the training schedule (§4.2.2 states the same 64K start without the 'no dense warmup' clause), and printed in the viewer's positional column. The check re-derives 64K from the committed snapshot and requires the page's line to carry it; no committed artifact reproduces a training schedule. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'Sparse attention is trained from scratch at a sequence length of 64K'",
-      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.2 Training Setups (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §1 Introduction (§4.2.2 states the same 64K start) (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-14",
       "source": {
-        "section": "4.2.2 Training Setups",
+        "section": "1 Introduction (§4.2.2 states the same 64K start)",
         "quote": "Sparse attention is trained from scratch at a sequence length of 64K, without any dense attention warmup stages."
       },
       "viewer": {
@@ -714,7 +774,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "a §4.2.2 training-stage statement (64K context, no dense warmup) printed as text; nothing offline recomputes a training schedule"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"Sparse attention is trained from scratch at a sequence length of 64K, without any dense attention warmup stages.\";r=re.search(r\"Sparse attention is trained from scratch at a sequence length of (\\d+)K\",S);v=re.findall(r\"(\\d+)K\\s*\\u8d77\\u7a00\\u758f\\u4ece\\u96f6\\u8bad\\u7ec3\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);R=\"sparse attention from scratch at %sK\"%r.groups();V=\"%sK, no dense warmup\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: sparse attention from scratch at 64K | viewer: 64K, no dense warmup | quote in snapshot: True | match: True"
+        }
       }
     },
     {
@@ -722,10 +786,10 @@
       "claim": "Sequence length extended to 1M at 34T tokens.",
       "value": "sequence length extended to 1M at 34T tokens",
       "metric": "reported training-schedule figure",
-      "method": "Quoted from §4.2.2. The viewer's context slider tops out at 1,048,576 tokens (4096 x 256^t) because that is the model's context limit, not a recomputation of the training schedule, and 34T tokens appears nowhere in the repository.",
+      "method": "Quoted from §4.2.2. The viewer's context slider tops out at 1,048,576 tokens (4096 x 256^t) because that is the model's context limit, not a recomputation of the training schedule. The check re-derives 1M/34T from the committed snapshot and requires the page's line to carry both. The snapshot is a point-in-time capture of the report text fetched on 2026-09-14; freshness is not checked, and re-fetching the PDF is a manual step (source.how_to_recheck).",
       "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'extend the sequence length to 1M at 34T tokens'",
       "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.2 Training Setups (sha256 ba68e2e40408…)",
-      "as_of": "2026-09-13",
+      "as_of": "2026-09-14",
       "source": {
         "section": "4.2.2 Training Setups",
         "quote": "extend the sequence length to 1M at 34T tokens"
@@ -737,7 +801,11 @@
         "must_not_contain": []
       },
       "check": {
-        "manual": "the 1M/34T training schedule is a §4.2.2 figure; the PDF is not committed and 34T appears nowhere in the repository"
+        "cmd": "python3 -c 'import re;n=lambda p:re.sub(r\"\\s+\",\" \",open(p,encoding=\"utf-8\").read());S=n(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\");H=n(\"index.html\");Q=\"extend the sequence length to 1M at 34T tokens\";r=re.search(r\"extend the sequence length to (\\d+)M at (\\d+)T tokens\",S);v=re.findall(r\"(\\d+)T\\s*token\\s*\\u65f6\\u6269\\u5230\\s*(\\d+)M\",H);W=v[0] if v else ();W=W if isinstance(W,tuple) else (W,);W=tuple(W[i-1] for i in (2, 1));R=\"%sM at %sT tokens\"%r.groups();V=\"%sM at %sT tokens\"%W;F=sorted(x for g in v for x in (g if isinstance(g,tuple) else (g,)));M=(set(F)==set(r.groups()) and Q in S);print(\"report: %s | viewer: %s | quote in snapshot: %s | match: %s\"%(R,V,Q in S,M))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "report: 1M at 34T tokens | viewer: 1M at 34T tokens | quote in snapshot: True | match: True"
+        }
       }
     },
     {

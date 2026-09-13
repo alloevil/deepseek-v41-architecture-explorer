@@ -14,6 +14,7 @@
 | 本地预览(no-store,避免浏览器缓存旧页) | `python3 serve.py 8741` → http://localhost:8741 |
 | 断言门禁(逐条核对页面 vs 报告原文) | `python3 verify.py`(加 `--json` 出机器可读) |
 | 重新核对报告原文 | `claims.json` 的 `source.how_to_recheck`(含 PDF 的 sha256) |
+| 机检 claim 的复算来源 | `docs/snapshots/deepseek-v41-tech-report-2026-09-14.md`(2026-09-14 抓取的报告原文摘录,头部含 URL 与 sha256) |
 | 左塔依据 | `claims.json` 的 `baseline_source`(arXiv 1706.03762) |
 
 ## 边界
@@ -33,6 +34,8 @@
 ## 数字与宣称
 
 正文（README、docs、发布说明）里出现的每个数字,要么在 `claims.json` 里有一条机检 claim(命令从已提交的数据独立重算),要么有一条 `manual` claim 写明缺哪个产物、为什么复算不了。推之前跑 `verify-claims --root . run`;只改数字不改 claim,CI 会在几分钟后替你发现(`claims.yml`)。
+
+报告原文里的数字,由机检 claim 从 `docs/snapshots/` 的已提交快照复算:快照是一次抓取的时间切片,门禁只验「数字与快照一致」,不复检上游报告是否已改。
 
 不确定还有哪些数字没人认领,跑 `verify-claims --root . coverage`:它列出正文里没有 claim 的数字——是待办清单,不是判定。
 
