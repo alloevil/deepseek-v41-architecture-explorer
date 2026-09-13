@@ -2,6 +2,7 @@
   "$comment": "Receipts for every number the viewer displays. Each entry carries the verbatim sentence from the technical report it came from; verify.py enforces that index.html still matches. Numbers the report does not publish are listed under removed_claims and must stay out.",
   "project": "deepseek-v41-architecture-explorer",
   "checked_on": "2026-09-11",
+  "updated": "2026-09-13",
   "source": {
     "title": "DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression",
     "publisher": "DeepSeek-AI",
@@ -21,6 +22,12 @@
     {
       "id": "arch.ced",
       "claim": "Decoder global KV is projected from the final encoder hidden states (H_{L/2}).",
+      "value": "decoder global KV projected from H₂₀ (the final encoder hidden state)",
+      "metric": "which hidden state the decoder's global KV comes from, and where the CED boundary is drawn in the built stack",
+      "method": "index.html builds one stack in code order: 2 SWA blocks, 3x6 CSA2 encoder layers, a 'CED boundary — H₂₀' block, then 5x4 decoder layers whose numbering starts at L20. The check re-derives the encoder layer count from those loop bounds, reads the base index the decoder's layer labels are numbered from, reads the H-index the boundary label names, and requires the boundary block to be constructed between the encoder and decoder groups.",
+      "repro": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();D=dict(zip(\"₀₁₂₃₄₅₆₇₈₉\",range(10)));e=re.findall(r\"for \\(let g = 0; g < (\\d+); g\\+\\+\\) \\{\\s*for \\(let j = 0; j < (\\d+); j\\+\\+\\) \\{\\s*const (?:full|mode)\",h);enc=2+int(e[0][0])*int(e[0][1]);base=int(re.search(r\"Decoder L\\$\\{(\\d+) \\+\",h).group(1));hs=int(\"\".join(str(D[c]) for c in re.search(r\"H([₀-₉]+)\",h).group(1)));i=h.index(\"const ced = rightBlock\");print(\"encoder L0-L%d\"%(enc-1), \"decoder base L%d\"%base, \"CED H%d\"%hs, \"boundary between stacks:\", h.index(\"const encGroupsLast\")<i<h.index(\"const decBlocks\"), \"kv from encoder last:\", base==enc==hs)'",
+      "evidence": "index.html (CED boundary block + decoder layer numbering)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "2.1 Overview / eq. (1)",
         "quote": "We adopt a Causal Encoder-Decoder (CED) architecture, in which decoder global KV is projected from the final encoder hidden states."
@@ -30,11 +37,24 @@
           "解码器全局 KV 由编码器最后隐状态投影"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "cmd": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();D=dict(zip(\"₀₁₂₃₄₅₆₇₈₉\",range(10)));e=re.findall(r\"for \\(let g = 0; g < (\\d+); g\\+\\+\\) \\{\\s*for \\(let j = 0; j < (\\d+); j\\+\\+\\) \\{\\s*const (?:full|mode)\",h);enc=2+int(e[0][0])*int(e[0][1]);base=int(re.search(r\"Decoder L\\$\\{(\\d+) \\+\",h).group(1));hs=int(\"\".join(str(D[c]) for c in re.search(r\"H([₀-₉]+)\",h).group(1)));i=h.index(\"const ced = rightBlock\");print(\"encoder L0-L%d\"%(enc-1), \"decoder base L%d\"%base, \"CED H%d\"%hs, \"boundary between stacks:\", h.index(\"const encGroupsLast\")<i<h.index(\"const decBlocks\"), \"kv from encoder last:\", base==enc==hs)'",
+        "timeout": 60,
+        "expect": {
+          "equals": "encoder L0-L19 decoder base L20 CED H20 boundary between stacks: True kv from encoder last: True"
+        }
       }
     },
     {
       "id": "arch.ced_half",
       "claim": "CED computes only the first half of the layers during prefill.",
+      "value": "prefill = 20 of the 40 layers (half)",
+      "metric": "encoder layers prefill runs, out of all layers built — in the viewer and in the committed README figure",
+      "method": "index.html's tower builder fixes the split (2 SWA + 3x6 encoder layers, then 5x4 decoder layers) and the phase toggle dims the decoder's global-attention layers. The committed hero figure assets/readme/hero.svg draws the same stack as 40 layer bars, 20 of them dimmed above the dashed CED boundary, under its own caption 'prefill runs half the stack'. The check derives both counts and requires them to agree.",
+      "repro": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();s=int(re.search(r\"const swaBlocks = \\[\\];\\s*for \\(let i = 0; i < (\\d+); i\\+\\+\\)\",h).group(1));e=re.findall(r\"for \\(let g = 0; g < (\\d+); g\\+\\+\\) \\{\\s*for \\(let j = 0; j < (\\d+); j\\+\\+\\) \\{\\s*const (?:full|mode)\",h);enc=s+int(e[0][0])*int(e[0][1]);tot=enc+int(e[1][0])*int(e[1][1]);v=open(\"assets/readme/hero.svg\",encoding=\"utf-8\").read();bars=re.findall(r\"<rect x=.680. y=.[0-9.]+. width=.120. height=.5\\.2.[^>]*>\",v);print(\"viewer: prefill %d of %d layers = %s | hero figure: %d of %d layer bars dimmed\"%(enc,tot,\"half\" if enc*2==tot else \"NOT half\",len([b for b in bars if \"opacity\" in b]),len(bars)))'",
+      "evidence": "index.html + assets/readme/hero.svg",
+      "as_of": "2026-09-13",
       "source": {
         "section": "2.2 CED",
         "quote": "This design allows CED to compute only the first half of the layers during the prefill phase"
@@ -44,11 +64,24 @@
           "prefill 只跑一半栈"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "cmd": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();s=int(re.search(r\"const swaBlocks = \\[\\];\\s*for \\(let i = 0; i < (\\d+); i\\+\\+\\)\",h).group(1));e=re.findall(r\"for \\(let g = 0; g < (\\d+); g\\+\\+\\) \\{\\s*for \\(let j = 0; j < (\\d+); j\\+\\+\\) \\{\\s*const (?:full|mode)\",h);enc=s+int(e[0][0])*int(e[0][1]);tot=enc+int(e[1][0])*int(e[1][1]);v=open(\"assets/readme/hero.svg\",encoding=\"utf-8\").read();bars=re.findall(r\"<rect x=.680. y=.[0-9.]+. width=.120. height=.5\\.2.[^>]*>\",v);print(\"viewer: prefill %d of %d layers = %s | hero figure: %d of %d layer bars dimmed\"%(enc,tot,\"half\" if enc*2==tot else \"NOT half\",len([b for b in bars if \"opacity\" in b]),len(bars)))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "viewer: prefill 20 of 40 layers = half | hero figure: 20 of 40 layer bars dimmed"
+        }
       }
     },
     {
       "id": "arch.params",
       "claim": "552B backbone parameters.",
+      "value": "552B backbone parameters",
+      "metric": "reported backbone parameter total",
+      "method": "The viewer prints 552B in the right tower's title and the README hero figure repeats it, but nothing in the repository computes it: the pW weights in index.html are the documented per-block approximations that only drive the 'by parameters' scale mode (README, Caveats).",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F '552B backbone parameters'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §2.1 Overview (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "2.1 Overview",
         "quote": "DeepSeek-V4.1-Flash has 552B backbone parameters"
@@ -58,11 +91,20 @@
           "552B"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "the 552B backbone total is the report's own count (§2.1) and the 51-page PDF is not committed here (URL + sha256 only); the per-block weights in index.html are documented scale-mode approximations, not a parameter breakdown, so no offline command can recompute it"
       }
     },
     {
       "id": "arch.activation",
       "claim": "8B activated per token in prefill, 16B in decode.",
+      "value": "8B activated per token in prefill, 16B in decode",
+      "metric": "reported activated parameters per token, per phase",
+      "method": "Printed in the right tower's title ('40 layers (CED) · 552B · 8B/16B active') and in the viewer's FFN fact column. The aW weights in index.html are the same documented approximations for the 'by activation' scale mode, not an activation count.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'activate 8B parameters per token'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §2.1 Overview (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "2.1 Overview",
         "quote": "This design enables the model to activate 8B parameters per token during prefill and 16B during decode"
@@ -72,11 +114,20 @@
           "prefill 激活 8B / 解码 16B"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "the 8B/16B activation counts are report figures (§2.1); the PDF is not committed and the viewer's aW weights are scale-mode approximations, so nothing here recomputes them"
       }
     },
     {
       "id": "kv.bytes",
       "claim": "Global KV cache = 890 bytes per token in FP4, ~1/4 of V4-Flash.",
+      "value": "890 B/token (global KV, FP4)",
+      "metric": "bytes of global KV cache per token, as the viewer's KV-cost slider and readouts use it",
+      "method": "index.html holds the viewer's KV constants as code — KV_NAIVE = 36 * 1024 and KV_FP4 = 890 bytes per token — and every KB/MB readout in the context slider is computed from them; the check reads KV_FP4 out of index.html. The '~1/4 of V4-Flash' half of the sentence is the report's comparison and is not recomputable here: DeepSeek-V4-Flash's own footprint is not in this repository.",
+      "repro": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();print(int(re.search(r\"const KV_NAIVE = \\d+ \\* \\d+, KV_FP4 = (\\d+);\",h).group(1)))'",
+      "evidence": "index.html (KV_FP4 in the context slider)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "1 Introduction / 2.4.4",
         "quote": "reduce its global KV cache footprint (always in HBM) to 890 bytes per token, roughly 1/4 of the corresponding footprint of DeepSeek-V4-Flash"
@@ -88,11 +139,24 @@
           "1/4"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "cmd": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();print(int(re.search(r\"const KV_NAIVE = \\d+ \\* \\d+, KV_FP4 = (\\d+);\",h).group(1)))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "890"
+        }
       }
     },
     {
       "id": "kv.persistent",
       "claim": "Persistent KV cache ~1/8 of V4-Flash via SWA Bounded Replay.",
+      "value": "persistent KV ≈ 1/8 of V4-Flash",
+      "metric": "reported ratio of persistent (SSD/host) KV cache footprint to DeepSeek-V4-Flash's",
+      "method": "Quoted from §3.2.2 and printed in the viewer's KV fact column. Neither DeepSeek-V4-Flash's persistent footprint nor the SWA Bounded Replay arithmetic that produces the ratio is committed here.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'roughly 1/8'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §3.2.2 SWA Bounded Replay (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "3.2.2 SWA Bounded Replay",
         "quote": "reduces its persistent KV cache footprint (always on SSD or in host memory) to roughly 1/8 of that of DeepSeek-V4-Flash"
@@ -102,11 +166,20 @@
           "1/8"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "the 1/8 ratio compares against DeepSeek-V4-Flash's persistent footprint (§3.2.2), which is not published in this repository and not vendored from the report PDF"
       }
     },
     {
       "id": "kv.437",
       "claim": "~437x smaller per-token global KV than DeepSeek-V1.",
+      "value": "~437x smaller per-token global KV than DeepSeek-V1",
+      "metric": "reported ratio of per-token global KV cache size to DeepSeek-V1's",
+      "method": "Quoted from the Figure 1 caption and printed in the viewer ('1/437'). The repository's only per-token baseline is the viewer's own 2017-Transformer arithmetic (36 KB/token, labelled as derived); DeepSeek-V1's footprint is nowhere here.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F '437-fold'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — Figure 1 caption (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "Figure 1 caption",
         "quote": "achieves approximately 4-fold and 437-fold reductions in per-token global KV cache size relative to DeepSeek-V4-Flash and DeepSeek-V1"
@@ -116,11 +189,20 @@
           "1/437"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "the 437-fold ratio compares against DeepSeek-V1's per-token footprint (Figure 1), which appears nowhere in this repository"
       }
     },
     {
       "id": "kv.fp4",
       "claim": "MXFP4 E2M1 with one E4M3 scale per 16 channels.",
+      "value": "MXFP4 E2M1, one E4M3 scale per 16 channels",
+      "metric": "reported FP4 quantisation format of the main KV cache",
+      "method": "A format specification quoted from §2.4.4 into the viewer's text (tooltips say 'MXFP4 E2M1 after RoPE'). No committed artifact encodes or computes the format or its channel count.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'E2M1 with one E4M3 scale per 16 channels'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §2.4.4 FP4 Main KV Cache (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "2.4.4 FP4 Main KV Cache",
         "quote": "we select E2M1 with one E4M3 scale per 16 channels"
@@ -131,11 +213,20 @@
           "每 16 通道一个 E4M3 scale"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "a quantisation-format spec quoted from §2.4.4; the PDF is not committed, and no code or data here encodes MXFP4 E2M1 or the 16-channel group size"
       }
     },
     {
       "id": "kv.quant_after_rope",
       "claim": "The cache is quantized after RoPE.",
+      "value": "the cache is quantized after RoPE",
+      "metric": "qualitative statement about where quantisation sits in the pipeline",
+      "method": "A mechanism statement with no figure, quoted from §2.4.4: the viewer states it and this file keeps the sentence, but there is no number for a command to recompute.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'quantize the cache after RoPE'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §2.4.4 FP4 Main KV Cache (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "2.4.4 FP4 Main KV Cache",
         "quote": "We quantize the cache after RoPE"
@@ -145,11 +236,20 @@
           "RoPE 之后量化"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "a mechanism statement with no figure; there is nothing offline to recompute"
       }
     },
     {
       "id": "swa.window",
       "claim": "SWA window n_win = 128 in every layer.",
+      "value": "n_win = 128 tokens, every layer",
+      "metric": "reported sliding-window size",
+      "method": "Quoted from §4.2.1 and printed throughout the viewer (tooltips, LAYER_SPEC dim 'n_win = 128', walkthrough captions). 128 appears only as displayed text: no constant in index.html is derived from the window, so nothing offline recomputes it.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'the window size'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.1 Model Setups (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "the window size 𝑛win is set to 128"
@@ -159,11 +259,20 @@
           "128 token 滑动窗口"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "128 is the report's §4.2.1 window size, printed in the viewer as text only; the PDF is not committed and no constant or derived value in the repository depends on it"
       }
     },
     {
       "id": "swa.first_two",
       "claim": "The first two layers use pure SWA.",
+      "value": "2 layers (L0–L1) are pure SWA",
+      "metric": "SWA-only blocks built before any CSA2 encoder layer",
+      "method": "index.html builds the SWA blocks in their own loop ahead of the CSA2 group loops (`const swaBlocks = []; for (let i = 0; i < 2; i++)`); the check reads that bound and requires the SWA blocks to be constructed before the encoder's CSA2 groups.",
+      "repro": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();n=int(re.search(r\"const swaBlocks = \\[\\];\\s*for \\(let i = 0; i < (\\d+); i\\+\\+\\)\",h).group(1));print(n, \"SWA blocks, built before the CSA2 groups:\", h.index(\"const swaBlocks\")<h.index(\"const encGroupsLast\"))'",
+      "evidence": "index.html (swaBlocks loop in the tower builder)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "For the first two layers, we use pure sliding window attention."
@@ -173,11 +282,24 @@
           "纯 SWA"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "cmd": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();n=int(re.search(r\"const swaBlocks = \\[\\];\\s*for \\(let i = 0; i < (\\d+); i\\+\\+\\)\",h).group(1));print(n, \"SWA blocks, built before the CSA2 groups:\", h.index(\"const swaBlocks\")<h.index(\"const encGroupsLast\"))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "2 SWA blocks, built before the CSA2 groups: True"
+        }
       }
     },
     {
       "id": "csa2.encoder",
       "claim": "Encoder CSA2: 3 groups of 6, first layer Full, next 5 Reuse (m=2).",
+      "value": "3 groups x 6 layers, m = 2 — 1 Full + 5 Reuse per group",
+      "metric": "encoder CSA2 groups, their size, the Full/Reuse split, and the compression rate the blocks carry",
+      "method": "The encoder group nest in index.html is `for (g < 3) { for (j < 6) { const full = j === 0; ...` and every encoder block sets `b.userData.m = 2`; the check re-derives the group shape, the Full/Reuse counts (3 + 15) and the first userData.m literal.",
+      "repro": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();g,j=map(int,re.search(r\"for \\(let g = 0; g < (\\d+); g\\+\\+\\) \\{\\s*for \\(let j = 0; j < (\\d+); j\\+\\+\\) \\{\\s*const full = j === 0;\",h).groups());m=int(re.search(r\"b\\.userData\\.m = (\\d+);\",h).group(1));print(\"%dx%d groups, %d encoder layers: %d Full + %d Reuse, m=%d\"%(g,j,g*j,g,g*(j-1),m))'",
+      "evidence": "index.html (encoder CSA2 group loops)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "These layers are divided into three identically configured groups of six layers. In each group, the first layer operates in Full Mode, and the remaining five layers operate in Reuse Mode."
@@ -187,11 +309,24 @@
           "三组各 6 层"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "cmd": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();g,j=map(int,re.search(r\"for \\(let g = 0; g < (\\d+); g\\+\\+\\) \\{\\s*for \\(let j = 0; j < (\\d+); j\\+\\+\\) \\{\\s*const full = j === 0;\",h).groups());m=int(re.search(r\"b\\.userData\\.m = (\\d+);\",h).group(1));print(\"%dx%d groups, %d encoder layers: %d Full + %d Reuse, m=%d\"%(g,j,g*j,g,g*(j-1),m))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "3x6 groups, 18 encoder layers: 3 Full + 15 Reuse, m=2"
+        }
       }
     },
     {
       "id": "csa2.decoder",
       "claim": "Decoder CSA2: 5 groups of 4, group 1 is Full + 3 Reuse (m=1).",
+      "value": "5 groups x 4 layers, m = 1 — group 1 is 1 Full + 3 Reuse",
+      "metric": "decoder CSA2 groups, their size, the group-1 mode split, and the compression rate",
+      "method": "The decoder nest in index.html is `for (g < 5) { for (j < 4) { const mode = j === 0 ? (g === 0 ? 'Full' : 'Reindex') : 'Reuse'; ...` with `b.userData.m = 1`; the check re-derives the shape, the group-1 split and the decoder's m literal.",
+      "repro": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();g,j=map(int,re.search(r\"for \\(let g = 0; g < (\\d+); g\\+\\+\\) \\{\\s*for \\(let j = 0; j < (\\d+); j\\+\\+\\) \\{\\s*const mode =\",h).groups());ms=[int(x) for x in re.findall(r\"b\\.userData\\.m = (\\d+);\",h)];print(\"%dx%d groups, %d decoder layers: group 1 = 1 Full + %d Reuse, m=%d\"%(g,j,g*j,j-1,ms[1]))'",
+      "evidence": "index.html (decoder CSA2 group loops)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "The 20 decoder layers use CSA2 with a compression rate of 𝑚 = 1. These layers are divided into five groups of four layers. In the first group, the first layer operates in Full Mode, and the remaining three layers operate in Reuse Mode."
@@ -202,11 +337,24 @@
           "第 1 组 Full + 3 Reuse"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "cmd": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();g,j=map(int,re.search(r\"for \\(let g = 0; g < (\\d+); g\\+\\+\\) \\{\\s*for \\(let j = 0; j < (\\d+); j\\+\\+\\) \\{\\s*const mode =\",h).groups());ms=[int(x) for x in re.findall(r\"b\\.userData\\.m = (\\d+);\",h)];print(\"%dx%d groups, %d decoder layers: group 1 = 1 Full + %d Reuse, m=%d\"%(g,j,g*j,j-1,ms[1]))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "5x4 groups, 20 decoder layers: group 1 = 1 Full + 3 Reuse, m=1"
+        }
       }
     },
     {
       "id": "csa2.decoder_reindex",
       "claim": "Decoder groups 2-5 start with Reindex Mode.",
+      "value": "4 decoder groups (2–5) begin in Reindex mode",
+      "metric": "decoder groups whose first layer is Reindex",
+      "method": "In index.html the decoder's mode expression assigns 'Reindex' to j === 0 of every group except the first; the check matches that expression, reads the group count from the same loop bounds, and derives 5 - 1 = 4 groups.",
+      "repro": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();g=int(re.search(r\"for \\(let g = 0; g < (\\d+); g\\+\\+\\) \\{\\s*for \\(let j = 0; j < (\\d+); j\\+\\+\\) \\{\\s*const mode = j === 0 \\? \\(g === 0 \\? .Full. : .Reindex.\\) : .Reuse.;\",h).group(1));print(\"groups 2-%d start with Reindex: %d\"%(g,g-1))'",
+      "evidence": "index.html (decoder mode expression)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "The remaining four groups share the same configuration: the first layer operates in Reindex Mode"
@@ -216,11 +364,24 @@
           "Reindex"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "cmd": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();g=int(re.search(r\"for \\(let g = 0; g < (\\d+); g\\+\\+\\) \\{\\s*for \\(let j = 0; j < (\\d+); j\\+\\+\\) \\{\\s*const mode = j === 0 \\? \\(g === 0 \\? .Full. : .Reindex.\\) : .Reuse.;\",h).group(1));print(\"groups 2-%d start with Reindex: %d\"%(g,g-1))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "groups 2-5 start with Reindex: 4"
+        }
       }
     },
     {
       "id": "indexer.topk",
       "claim": "Sparse attention reads Top-512 main KV entries per query.",
+      "value": "Top-512 main KV entries read per query",
+      "metric": "reported number of KV entries selected for sparse attention",
+      "method": "Quoted from §4.2.1 and printed by the viewer ('Top-512', LAYER_SPEC dim 'k = 512'). index.html derives nothing from it — the viewer never selects entries.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'attention top-k'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.1 Model Setups (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "the number of KV entries selected for sparse attention (i.e., attention top-k) to 512"
@@ -230,11 +391,20 @@
           "Top-512"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "Top-512 is a §4.2.1 model-setup value printed as text; the viewer never selects KV entries, so nothing derives it"
       }
     },
     {
       "id": "indexer.pool",
       "claim": "Candidate pool: 2048 blocks x 8 positions = 16,384 positions.",
+      "value": "2,048 blocks x 8 positions = 16,384 candidates",
+      "metric": "the candidate-pool arithmetic the viewer states",
+      "method": "The walkthrough text and the Full-layer tooltip in index.html state the pool as '2,048 blocks × 8 = 16,384 positions'; the check parses those two factors out of the committed sentence and requires their product to equal the 16,384 the same sentence prints. The viewer does not model the pool, so that sentence is the only data behind the figure.",
+      "repro": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();m=re.search(r\"(\\d[\\d,]*) (?:blocks|块) × (\\d+) = (\\d[\\d,]*)(?: positions| 位)\",h);a=int(m.group(1).replace(\",\",\"\"));b=int(m.group(2));c=int(m.group(3).replace(\",\",\"\"));print(\"%d blocks × %d positions = %s, product matches: %s\"%(a,b,m.group(3),a*b==c))'",
+      "evidence": "index.html (walkthrough / tooltip pool sentence)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "2.3.2 Hierarchical Sparse Indexer",
         "quote": "selecting 2,048 blocks with 8 positions each yields 16,384 candidate positions"
@@ -244,11 +414,24 @@
           "2048 块 × 8"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "cmd": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();m=re.search(r\"(\\d[\\d,]*) (?:blocks|块) × (\\d+) = (\\d[\\d,]*)(?: positions| 位)\",h);a=int(m.group(1).replace(\",\",\"\"));b=int(m.group(2));c=int(m.group(3).replace(\",\",\"\"));print(\"%d blocks × %d positions = %s, product matches: %s\"%(a,b,m.group(3),a*b==c))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "2048 blocks × 8 positions = 16,384, product matches: True"
+        }
       }
     },
     {
       "id": "attn.heads",
       "claim": "64 query heads, head dim 512, query compression dim 1280.",
+      "value": "64 query heads, head dim 512, query compression dim 1280",
+      "metric": "reported attention head configuration",
+      "method": "Quoted from §4.2.1 and printed in the viewer (CONCEPTS header '64 q-heads · head dim 512 · q-compress 1280', LAYER_SPEC dims). No committed artifact computes head counts or dimensions.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'number of query heads to 64'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.1 Model Setups (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "We set the number of query heads to 64, the head dimension to 512, and the query compression dimension to 1280."
@@ -258,11 +441,20 @@
           "q 压缩 1280"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "the head count, head dim and query-compression dim are §4.2.1 model-setup values printed as text; no committed artifact computes them"
       }
     },
     {
       "id": "indexer.heads",
       "claim": "Indexer: 32 query heads, head dim 128.",
+      "value": "indexer: 32 query heads, head dim 128",
+      "metric": "reported sparse-indexer head configuration",
+      "method": "Quoted from §4.2.1 and printed in the viewer's attention column ('Indexer: 32 heads, dim 128'); nothing in the repository derives it.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'indexer query heads to 32'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.1 Model Setups (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "we set the number of indexer query heads to 32, the indexer head dimension to 128"
@@ -272,11 +464,20 @@
           "索引器 32 头、dim 128"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "the indexer head count and dim are §4.2.1 model-setup values printed as text; nothing in the repository computes them"
       }
     },
     {
       "id": "moe.experts",
       "claim": "MoE: 1 shared + 384 routed experts, 6 active, expert dim 2304.",
+      "value": "1 shared + 384 routed experts, 6 active",
+      "metric": "cells in the drawn expert field, highlighted cells, and shared-expert blocks",
+      "method": "index.html builds the expert field as MOE_COLS = 24 x MOE_ROWS = 16 = 384 cells, highlights the six ids in the ACTIVE set, and adds one shared cell; the check re-multiplies the two constants and counts the set and the shared cell. The expert hidden dimension (2304) is a report value printed as text.",
+      "repro": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();c,r=map(int,re.search(r\"const MOE_COLS = (\\d+), MOE_ROWS = (\\d+)\",h).groups());a=len(re.search(r\"const ACTIVE = new Set\\(\\[([^\\]]*)\\]\\)\",h).group(1).split(\",\"));sh=len(re.findall(r\"const sharedCell =\",h));print(\"shared %d routed %d active %d\"%(sh,c*r,a))'",
+      "evidence": "index.html (MoE cell field + ACTIVE set)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "Each MoE layer consists of 1 shared expert and 384 routed experts, where the intermediate hidden dimension of each expert is 2304. Among the routed experts, 6 experts will be activated for each token."
@@ -286,11 +487,24 @@
           "1 共享 + 384 路由专家"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "cmd": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();c,r=map(int,re.search(r\"const MOE_COLS = (\\d+), MOE_ROWS = (\\d+)\",h).groups());a=len(re.search(r\"const ACTIVE = new Set\\(\\[([^\\]]*)\\]\\)\",h).group(1).split(\",\"));sh=len(re.findall(r\"const sharedCell =\",h));print(\"shared %d routed %d active %d\"%(sh,c*r,a))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "shared 1 routed 384 active 6"
+        }
       }
     },
     {
       "id": "mhc.expansion",
       "claim": "Single-Pass mHC: expansion factor 4, 20 Sinkhorn-Knopp iterations.",
+      "value": "expansion factor 4 (4 parallel residual streams); 20 Sinkhorn-Knopp iterations",
+      "metric": "mHC residual rails drawn in the scene",
+      "method": "index.html draws one rail per residual stream in a loop over 4 (`for (let r = 0; r < 4; r++) { makeRail({ x: RX - 2.4 + r * 1.6, ... COLORS.mhc ... }) }`); the check reads that bound. The 20 Sinkhorn-Knopp iterations are a report value printed as text, not a scene parameter.",
+      "repro": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();print(re.search(r\"for \\(let r = 0; r < (\\d+); r\\+\\+\\) \\{\\s*makeRail\\(\\{ x: RX - 2\\.4 \\+ r \\* 1\\.6\",h).group(1), \"mHC residual streams\")'",
+      "evidence": "index.html (mHC rail loop)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "As for mHC, the expansion factor is set to 4, and the number of Sinkhorn-Knopp iterations is set to 20."
@@ -301,11 +515,24 @@
           "20 次 Sinkhorn 迭代"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "cmd": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();print(re.search(r\"for \\(let r = 0; r < (\\d+); r\\+\\+\\) \\{\\s*makeRail\\(\\{ x: RX - 2\\.4 \\+ r \\* 1\\.6\",h).group(1), \"mHC residual streams\")'",
+        "timeout": 60,
+        "expect": {
+          "equals": "4 mHC residual streams"
+        }
       }
     },
     {
       "id": "engram.params",
       "claim": "Engram: 196B parameters in two modules.",
+      "value": "196B parameters across two modules",
+      "metric": "reported Engram parameter total",
+      "method": "Quoted from §2.4.2 and printed in the viewer ('Engram · 196B'). The two Engram blocks in index.html carry pW 98.3 each (documented approximations for the scale modes, summing to 196.6), so no committed artifact reproduces the report's 196B.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'We allocate 196B Engram parameters'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §2.4.2 Engram (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "2.4.2 Engram",
         "quote": "We allocate 196B Engram parameters evenly across two modules."
@@ -315,11 +542,20 @@
           "196B"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "196B is the report's Engram total (§2.4.2) and the PDF is not committed; the two Engram blocks in index.html carry scale-mode approximations (98.3 each) that do not reproduce it"
       }
     },
     {
       "id": "engram.layers",
       "claim": "Engram modules sit at layers 1 and 14 (zero-indexed).",
+      "value": "Engram modules sit at layers 1 and 14 (zero-indexed)",
+      "metric": "layers the Engram blocks are attached to, checked against the layer schedule derived from the code",
+      "method": "index.html labels the two Engram blocks 'Engram module @ L1' / '@ L14' and splices the second one in after the block whose label starts with 'Encoder L14'; the check expands the schedule from the loop bounds (SWA L0–L1, encoder L2–L19 from `2 + g * 6 + j`) and requires each Engram layer to exist in it as the right kind of layer.",
+      "repro": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();e=re.findall(r\"for \\(let g = 0; g < (\\d+); g\\+\\+\\) \\{\\s*for \\(let j = 0; j < (\\d+); j\\+\\+\\) \\{\\s*const (?:full|mode)\",h);enc={2+a*int(e[0][1])+b for a in range(int(e[0][0])) for b in range(int(e[0][1]))};print(\"Engram layers:\", \" \".join(\"L%d:%s\"%(n, \"swa\" if n<=1 else (\"csa2\" if n in enc else \"missing\")) for n in sorted(set(int(x) for x in re.findall(r\"Engram module @ L(\\d+)\",h)))))'",
+      "evidence": "index.html (Engram blocks + layer schedule)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "2.4.2 Engram",
         "quote": "The modules are placed at layers 1 and 14 (zero-indexed)"
@@ -329,11 +565,24 @@
           "L1 与 L14"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "cmd": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();e=re.findall(r\"for \\(let g = 0; g < (\\d+); g\\+\\+\\) \\{\\s*for \\(let j = 0; j < (\\d+); j\\+\\+\\) \\{\\s*const (?:full|mode)\",h);enc={2+a*int(e[0][1])+b for a in range(int(e[0][0])) for b in range(int(e[0][1]))};print(\"Engram layers:\", \" \".join(\"L%d:%s\"%(n, \"swa\" if n<=1 else (\"csa2\" if n in enc else \"missing\")) for n in sorted(set(int(x) for x in re.findall(r\"Engram module @ L(\\d+)\",h)))))'",
+        "timeout": 60,
+        "expect": {
+          "equals": "Engram layers: L1:swa L14:csa2"
+        }
       }
     },
     {
       "id": "dspark.blocks",
       "claim": "DSpark: 3 Transformer blocks, 5 draft positions per forward pass.",
+      "value": "3 Transformer blocks in the drafter; 5 draft positions per forward pass",
+      "metric": "drafter blocks built beside the LM head",
+      "method": "index.html builds the drafter in a loop over 3 (`for (let i = 0; i < 3; i++) { ... 'DSpark drafter block ${i + 1}/3' ... }`); the check reads that bound. The 5 draft positions per forward pass are a §2.4.3 value printed as text (tooltips, WALK_STEPS) and are not computed anywhere.",
+      "repro": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();print(re.search(r\"for \\(let i = 0; i < (\\d+); i\\+\\+\\) \\{[\\s\\S]{0,250}?DSpark drafter block\",h).group(1), \"DSpark drafter blocks\")'",
+      "evidence": "index.html (DSpark drafter loop)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "2.4.3 DSpark",
         "quote": "The drafter comprises three Transformer blocks with a sliding attention window of 128 tokens. A single forward pass through these blocks computes base logits for five draft positions in parallel"
@@ -344,11 +593,24 @@
           "5 个 token"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "cmd": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();print(re.search(r\"for \\(let i = 0; i < (\\d+); i\\+\\+\\) \\{[\\s\\S]{0,250}?DSpark drafter block\",h).group(1), \"DSpark drafter blocks\")'",
+        "timeout": 60,
+        "expect": {
+          "equals": "3 DSpark drafter blocks"
+        }
       }
     },
     {
       "id": "vit.config",
       "claim": "DeepSeek-ViT: 32 layers, hidden 1024, 16 heads, patch 14.",
+      "value": "DeepSeek-ViT: 32 layers, hidden 1024, 16 heads, patch 14",
+      "metric": "reported vision-encoder configuration",
+      "method": "Quoted from §4.2.1 and printed in the viewer ('DeepSeek-ViT ×32', 'hidden 1024, 16 heads, patch 14'). The ViT mini-column draws six labelled groups and computes none of these numbers.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'number of layers to 32'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.1 Model Setups (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
         "quote": "we set its number of layers to 32, the hidden dimension to 1024, the number of attention heads to 16, and the image patch size to 14"
@@ -358,11 +620,20 @@
           "32 层、hidden 1024、16 头、patch 14"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "the ViT layer/width/head/patch numbers are §4.2.1 model-setup values printed as text; the viewer's ViT column is six labelled groups"
       }
     },
     {
       "id": "img.bound",
       "claim": "Images up to ~1344x1344 px via 3x3 pixel-unshuffle.",
+      "value": "images up to ~1344x1344 px",
+      "metric": "reported input resolution bound",
+      "method": "Quoted from §2.2 and printed in the viewer's input column; the viewer models no image resolutions, so nothing recomputes it.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'approximately 1344'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §2.2 Vision encoder (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "2.2 Vision encoder",
         "quote": "supporting input resolutions up to approximately 1344 × 1344 pixels"
@@ -372,11 +643,20 @@
           "1344×1344"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "the ~1344x1344 bound is a §2.2 value printed as text; the viewer models no resolutions"
       }
     },
     {
       "id": "effort.range",
       "claim": "Reasoning effort is continuously controllable, integer 1-100.",
+      "value": "reasoning effort is continuously controllable, integer 1–100",
+      "metric": "reported effort range",
+      "method": "Quoted from §5.1.4 and printed in the viewer's output column ('连续可调(整数 1–100)'). No committed artifact bounds anything at 1–100: the only slider in the page is the KV-cost context slider.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'higher values request more'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §5.1.4 Controllable Reasoning Effort in RL (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "5.1.4 Controllable Reasoning Effort in RL",
         "quote": "Reasoning Effort:           {effort} (range 1–100; higher values request more"
@@ -386,11 +666,20 @@
           "连续可调(整数 1–100)"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "the 1–100 effort range is a §5.1.4 value printed as text; no committed artifact constrains an effort parameter"
       }
     },
     {
       "id": "train.tokens",
       "claim": "Trained on a multimodal corpus of 45T tokens.",
+      "value": "trained on a multimodal corpus of 45T tokens",
+      "metric": "reported pre-training corpus size",
+      "method": "Quoted from §1 and printed in the viewer's overview column and the README hero figure; nothing in the repository counts tokens.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'multimodal corpus comprising 45T tokens'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §1 Introduction (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "1 Introduction",
         "quote": "multimodal corpus comprising 45T tokens"
@@ -400,11 +689,20 @@
           "45T tokens"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "45T is §1's corpus size, printed in the viewer and in the README hero figure; no committed artifact counts tokens"
       }
     },
     {
       "id": "train.64k",
       "claim": "Sparse attention trained from scratch at 64K, no dense warmup.",
+      "value": "sparse attention trained from scratch at 64K, no dense warmup",
+      "metric": "reported training-stage statement",
+      "method": "Quoted from §4.2.2 and printed in the viewer's positional column. It is a training-schedule statement (64K context, no dense warmup) with no committed artifact behind it.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'Sparse attention is trained from scratch at a sequence length of 64K'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.2 Training Setups (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "4.2.2 Training Setups",
         "quote": "Sparse attention is trained from scratch at a sequence length of 64K, without any dense attention warmup stages."
@@ -414,11 +712,20 @@
           "64K 起稀疏从零训练"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "a §4.2.2 training-stage statement (64K context, no dense warmup) printed as text; nothing offline recomputes a training schedule"
       }
     },
     {
       "id": "train.1m",
       "claim": "Sequence length extended to 1M at 34T tokens.",
+      "value": "sequence length extended to 1M at 34T tokens",
+      "metric": "reported training-schedule figure",
+      "method": "Quoted from §4.2.2. The viewer's context slider tops out at 1,048,576 tokens (4096 x 256^t) because that is the model's context limit, not a recomputation of the training schedule, and 34T tokens appears nowhere in the repository.",
+      "repro": "curl -sL -o /tmp/ds41.pdf https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf && sha256sum /tmp/ds41.pdf && pdftotext -layout /tmp/ds41.pdf - | grep -F 'extend the sequence length to 1M at 34T tokens'",
+      "evidence": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/main/DeepSeek_V41_Tech_Report.pdf — §4.2.2 Training Setups (sha256 ba68e2e40408…)",
+      "as_of": "2026-09-13",
       "source": {
         "section": "4.2.2 Training Setups",
         "quote": "extend the sequence length to 1M at 34T tokens"
@@ -428,11 +735,20 @@
           "34T token 时扩到 1M"
         ],
         "must_not_contain": []
+      },
+      "check": {
+        "manual": "the 1M/34T training schedule is a §4.2.2 figure; the PDF is not committed and 34T appears nowhere in the repository"
       }
     },
     {
       "id": "removed.fabrications",
       "claim": "Numbers the report does not publish, which an earlier revision asserted; they must stay out.",
+      "value": "0 of the 8 banned strings anywhere in the published surfaces",
+      "metric": "occurrences of this claim's must_not_contain strings across the viewer, the README and the README hero figure",
+      "method": "The check reads the banned list out of this same claim (viewer.must_not_contain), scans the three committed surfaces the viewer's numbers are published on, and requires zero hits. AGENTS.md is deliberately excluded: it quotes theta = 160,000 as a prohibition.",
+      "repro": "python3 -c 'import json;d=json.load(open(\"claims.json\",encoding=\"utf-8\"));b=[c for c in d[\"claims\"] if c[\"id\"]==\"removed.fabrications\"][0][\"viewer\"][\"must_not_contain\"];t=\"\".join(open(f,encoding=\"utf-8\").read() for f in [\"index.html\",\"README.md\",\"assets/readme/hero.svg\"]);print(len([s for s in b if s in t]), \"of\", len(b), \"found\")'",
+      "evidence": "index.html, README.md, assets/readme/hero.svg",
+      "as_of": "2026-09-13",
       "source": {
         "section": "absence check across the whole report",
         "quote": "n/a - these strings do not occur anywhere in DeepSeek_V41_Tech_Report.pdf"
@@ -449,6 +765,13 @@
           "单次请求图片数量不限",
           "40 层里 33 层是 Reuse"
         ]
+      },
+      "check": {
+        "cmd": "python3 -c 'import json;d=json.load(open(\"claims.json\",encoding=\"utf-8\"));b=[c for c in d[\"claims\"] if c[\"id\"]==\"removed.fabrications\"][0][\"viewer\"][\"must_not_contain\"];t=\"\".join(open(f,encoding=\"utf-8\").read() for f in [\"index.html\",\"README.md\",\"assets/readme/hero.svg\"]);print(len([s for s in b if s in t]), \"of\", len(b), \"found\")'",
+        "timeout": 60,
+        "expect": {
+          "equals": "0 of 8 found"
+        }
       }
     }
   ],
