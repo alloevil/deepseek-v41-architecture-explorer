@@ -4,3 +4,8 @@ __pycache__/
 Thumbs.db
 .idea/
 .vscode/
+
+# local training environment for tools/train_tiny_moe.py (~1 GB, recreate with:
+#   python3 -m venv tools/.venv
+#   tools/.venv/bin/pip install torch numpy --index-url https://download.pytorch.org/whl/cpu )
+tools/.venv/

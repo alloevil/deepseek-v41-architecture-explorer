@@ -131,6 +131,25 @@
   #bar-right { background: linear-gradient(90deg, #b48cff, #9a6bff); min-width: 3px; }
   .bnum { font-size: 10.5px; color: #c8d2e4; width: 60px; text-align: right; font-variant-numeric: tabular-nums; }
   #ctx-note { font-size: 9px; color: #4d576b; padding-top: 3px; }
+  #moe-head { display: flex; justify-content: space-between; align-items: center; padding: 7px 12px 4px;
+    cursor: pointer; font-size: 10.5px; color: #8d98ad; letter-spacing: 0.5px; user-select: none; }
+  #moe-head:hover { color: #c8d2e4; }
+  #moe-head .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #2aa876; margin-right: 5px; }
+  #moe-wrap.collapsed #moe-body { display: none; }
+  #moe-wrap.collapsed #moe-caret { transform: rotate(-90deg); }
+  #moe-caret { font-style: normal; transition: transform 0.2s; }
+  #moe-body { padding: 0 12px 10px; border-bottom: 1px solid #1e2434; }
+  #moe-prompt { font-size: 12px; color: #e8ecf4; font-family: ui-monospace, monospace; margin-bottom: 6px; }
+  #moe-prompt .ok { color: #51e6a8; }
+  #moe-prompt .bad { color: #ff8d5c; }
+  .moe-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 11px; color: #b9c2d4; }
+  .moe-row .lt { color: #8d98ad; min-width: 30px; font-variant-numeric: tabular-nums; }
+  .moe-row .tk { font-family: ui-monospace, monospace; color: #e8ecf4; min-width: 18px; }
+  .moe-chip { font-size: 10px; padding: 1px 6px; border-radius: 3px; background: rgba(42,168,118,0.18);
+    border: 1px solid #2b6b4f; color: #7fe0b4; font-variant-numeric: tabular-nums; }
+  .moe-chip.off { background: rgba(111,102,168,0.14); border-color: #4a4670; color: #a99fd8; }
+  #moe-stat { font-size: 9.5px; color: #5d6a80; margin-top: 6px; line-height: 1.5; }
+  #moe-nav { margin-top: 7px; display: flex; gap: 6px; }
   #panel-cols { display: grid; grid-template-columns: 1fr 1fr; overflow-y: auto; }
   .col { padding: 12px 14px 16px; }
   .col.left { border-right: 1px solid #1e2434; }
@@ -254,6 +273,21 @@
     </div>
   </div>
   <div id="layer-view" style="display:none"></div>
+  <div id="moe-wrap" class="collapsed">
+    <div id="moe-head">
+      <span><span class="dot"></span><span data-zh="真实 MoE 路由(本仓库自训练的玩具模型)" data-en="Real MoE routing (toy model trained in this repo)">真实 MoE 路由(本仓库自训练的玩具模型)</span></span>
+      <i id="moe-caret">▾</i>
+    </div>
+    <div id="moe-body">
+      <div id="moe-prompt">—</div>
+      <div id="moe-layers"></div>
+      <div id="moe-nav">
+        <button class="mbtn" id="moe-next" data-zh="下一个样例" data-en="Next sample">下一个样例</button>
+        <button class="mbtn" id="moe-3d" data-zh="映到专家阵" data-en="Map to grid">映到专家阵</button>
+      </div>
+      <div id="moe-stat"></div>
+    </div>
+  </div>
   <div id="panel-cols">
     <div class="col left" id="col-left"></div>
     <div class="col right" id="col-right"></div>
@@ -962,6 +996,15 @@ function setCellMatrix(i, dy) {
   cells.setMatrixAt(i, _cellDummy.matrix);
 }
 function updateCellColors() {
+  // real-routing mode: light exactly the experts the trained model picked
+  if (moeMapped && moeTrace) {
+    const p = moePrompt(), on = new Set();
+    for (const L of p.layers) for (const t of L.tokens) for (const e of t.chosen) on.add(L.layer * MOE_COLS + e);
+    for (let i = 0; i < cellsCount; i++) cells.setColorAt(i, on.has(i) ? cellRouteColor : cellMapColor);
+    cellsMat.opacity = 1;
+    cells.instanceColor.needsUpdate = true;
+    return;
+  }
   const eff = hoverConcept || selectedConcept;
   const dim = !!eff && eff !== 'ffn';
   cellsMat.opacity = dim ? 0.15 : 1;
@@ -1219,6 +1262,7 @@ let hoverConcept = null; // hover preview overrides selection visually
 function setHighlight() {
   const eff = walkTargets ? null : (hoverConcept || selectedConcept);
   for (const m of interactives) {
+    if (m.userData.isInstanced && moeMapped) continue; // real-routing mode owns the grid
     const mat = m.material, o = m.userData.outline;
     if (walkTargets) { // walkthrough owns the highlight
       const on = walkTargets.has(m);
@@ -1511,6 +1555,56 @@ function stopWalk() {
   setWalkBtn(false);
 }
 
+/* ============================================================
+   Real MoE routing — data produced by tools/train_tiny_moe.py
+   (a tiny MoE trained on modular arithmetic; every number below came
+    out of an actual forward pass, not an illustration)
+   ============================================================ */
+let moeTrace = null, moeIdx = 0, moeMapped = false;
+const cellRouteColor = new THREE.Color(CELL_ACTIVE);
+const cellMapColor = new THREE.Color(0x1d5f47);
+async function loadMoeTrace() {
+  if (moeTrace) return moeTrace;
+  try { moeTrace = await (await fetch('moe-trace.json', { cache: 'no-store' })).json(); }
+  catch { moeTrace = null; }
+  return moeTrace;
+}
+function moePrompt() { return moeTrace ? moeTrace.prompts[moeIdx % moeTrace.prompts.length] : null; }
+function renderMoe() {
+  const pr = document.getElementById('moe-prompt');
+  const body = document.getElementById('moe-layers');
+  if (!moeTrace) { pr.textContent = lang === 'zh' ? 'moe-trace.json 未加载' : 'moe-trace.json not loaded'; body.innerHTML = ''; return; }
+  const p = moePrompt();
+  const ok = p.pred === p.target;
+  pr.innerHTML = `<b>${p.tokens[0]} ${p.tokens[1]} ${p.tokens[2]}</b> → ` +
+    `<span class="${ok ? 'ok' : 'bad'}">${p.pred}</span><span style="color:#5d6a80"> / target ${p.target}</span>`;
+  body.innerHTML = p.layers.map(L => L.tokens.map((t, i) => `<div class="moe-row">
+      <span class="lt">L${L.layer}</span><span class="tk">${t.tok}</span>
+      ${t.chosen.map((e, k) => `<span class="moe-chip">E${e} ${(t.probs[e] * 100).toFixed(0)}%</span>`).join('')}
+      <span class="moe-chip off">shared ${(L.shared_gate * 100).toFixed(0)}%</span>
+    </div>`).join('')).join('');
+  const m = moeTrace.model;
+  document.getElementById('moe-stat').textContent = lang === 'zh'
+    ? `模型:${m.params.toLocaleString()} 参数 · ${m.n_layer} 层 × ${m.n_expert} 专家(top-${m.top_k})+ 1 共享 · 留出集准确率 ${(moeTrace.accuracy * 100).toFixed(1)}% · 训练脚本 tools/train_tiny_moe.py`
+    : `model: ${m.params.toLocaleString()} params · ${m.n_layer} layers × ${m.n_expert} experts (top-${m.top_k}) + 1 shared · held-out accuracy ${(moeTrace.accuracy * 100).toFixed(1)}% · trainer: tools/train_tiny_moe.py`;
+  if (moeMapped) updateCellColors();
+}
+function setMoeMapped(on) {
+  moeMapped = on;
+  const b = document.getElementById('moe-3d');
+  if (b) b.classList.toggle('active', on);
+  updateCellColors();
+}
+(function initMoeUI() {
+  const wrap = document.getElementById('moe-wrap');
+  document.getElementById('moe-head').addEventListener('click', async () => {
+    const collapsed = wrap.classList.toggle('collapsed');
+    if (!collapsed) { await loadMoeTrace(); renderMoe(); }
+  });
+  document.getElementById('moe-next').addEventListener('click', () => { moeIdx++; renderMoe(); });
+  document.getElementById('moe-3d').addEventListener('click', () => setMoeMapped(!moeMapped));
+})();
+
 // nav chips (rebuilt on language switch)
 const pnav = document.getElementById('pnav');
 function buildChips() {
@@ -1539,6 +1633,7 @@ function setLang(l) {
   buildLegend();
   buildChips();
   refreshPanel();
+  if (moeTrace && !document.getElementById('moe-wrap').classList.contains('collapsed')) renderMoe();
   updateModeNote();
   updateCtx();
   savePrefs();

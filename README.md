@@ -41,6 +41,34 @@ technical report (section references are shown in the hover tooltips).
 - **▶ Walk (or press `W`)** → follow one token through all 40 layers, one station at a time, with a caption describing each step
 - **Phase toggle (Prefill / Decode)** → prefill dims the decoder's global-attention layers, matching the CED claim
 - **KV cost slider (4K → 1M)** → per-token cache cost for both architectures, with the ≈41× gap called out
+- **Real MoE routing** → the expert field can be driven by *measured* routing instead of an illustration: see below
+
+## Real routing, not an illustration
+
+The cube field on the floor shows 384 routed experts with 6 lit. To make that data real,
+[`tools/train_tiny_moe.py`](tools/train_tiny_moe.py) trains a tiny MoE **from scratch**
+(281,282 params: 2 layers × 4 experts, top-2 + 1 shared, d=64, 2 heads, SwiGLU, RMSNorm,
+RoPE) on modular arithmetic — predict `(a op b) mod 10` from the tokens `[a, b, op]` — and
+exports every router decision to [`moe-trace.json`](moe-trace.json):
+
+```
+held-out accuracy   100.0 %   (4096 samples, loss 2.44 → 0.0001)
+L0, operator slot   expert usage [2048, 11, 2037, 0]  ← two experts absorb every operator token
+routing patterns    6 distinct patterns for 6 prompts  ← routing depends on the input
+```
+
+Every number in the panel's **Real MoE routing** section, and every lit cube when you press
+**Map to grid**, comes out of an actual forward pass. The mapping is honest about scale: the
+toy model's 2 layers × 4 experts are drawn into the first columns of the grid, while the
+real V4.1 is 40 layers × 384 experts (6 active) — the panel says so.
+
+Reproduce (CPU only, ~4 minutes):
+
+```bash
+python3 -m venv tools/.venv
+tools/.venv/bin/pip install torch numpy --index-url https://download.pytorch.org/whl/cpu
+tools/.venv/bin/python tools/train_tiny_moe.py --out moe-trace.json
+```
 
 **Compare**
 - Concept chips (input, positional, attention, sparse schedule, FFN/experts, residual, memory, KV cache, output) → side-by-side fact columns, fully bilingual (中文 / EN)
