@@ -859,6 +859,17 @@
           ]
         },
         "timeout": 60
+      },
+      "source": {
+        "section": "4.2.1 Model Setups",
+        "quote": "We set the number of Transformer layers to 40 and the hidden dimension 𝑑 to 5120"
+      },
+      "viewer": {
+        "must_contain": [
+          "40 layer",
+          "https://alloevil.github.io/deepseek-v41-architecture-explorer/"
+        ],
+        "must_not_contain": []
       }
     }
   ],
