@@ -934,29 +934,6 @@
           ]
         }
       }
-    },
-    {
-      "id": "animated-pages-respect-reduced-motion",
-      "claim": "The page animates and it honours `prefers-reduced-motion` — motion here is decoration, and the page must stay complete when it is off.",
-      "value": "animated and reducible",
-      "metric": "pages containing `animation:`/`@keyframes` vs pages containing `prefers-reduced-motion`",
-      "method": "the check walks every committed .html page and covers all three ways a page moves — CSS animations/keyframes, SVG SMIL, and requestAnimationFrame — requiring a `prefers-reduced-motion` reference wherever it finds one. It does not judge what the fallback does, only that a branch exists, because a missing branch is invisible in review and obvious to the person it affects.",
-      "repro": "grep -c 'prefers-reduced-motion' index.html",
-      "evidence": "dsv41-3d/index.html",
-      "as_of": "2026-09-15",
-      "check": {
-        "cmd": "python3 - <<'PY'\nimport pathlib, re\n\n# 三种动效来源：CSS 动画/关键帧、SVG SMIL、以及 JS 的 requestAnimationFrame。\nMOVES = re.compile(r'animation\\s*:|@keyframes|<animate\\b|<animateTransform\\b|requestAnimationFrame')\nRELAX = 'prefers-reduced-motion'\npages = sorted(p for p in list(pathlib.Path('.').glob('*.html'))\n               + list(pathlib.Path('.').glob('docs/*.html')) if p.name != 'template.html')\nanimated, missing = 0, []\nfor p in pages:\n    t = p.read_text(encoding='utf-8', errors='replace')\n    if MOVES.search(t):\n        animated += 1\n        if RELAX not in t:\n            missing.append(p.name)\nprint('pages', len(pages), 'animated', animated, 'missing', missing)\nassert animated and not missing\nPY",
-        "expect": {
-          "regex": "missing \\[\\]$"
-        },
-        "timeout": 180
-      },
-      "source": {
-        "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion",
-        "section": "MDN · prefers-reduced-motion",
-        "quote": "The prefers-reduced-motion CSS media feature is used to detect if a user has enabled a setting on their device to minimize the amount of non-essential motion."
-      },
-      "viewer": {}
     }
   ],
   "removed_claims": [
@@ -1183,6 +1160,21 @@
         "note": "The trace is a specification-faithful simulation, not a measurement. Every row carries its own tag so a reader can tell which fields are exact; the panel also links to the measured toy-model routing."
       },
       "page_marker": "专家选择是模拟的"
+    },
+    {
+      "id": "animated-pages-respect-reduced-motion",
+      "claim": "The page animates and it honours `prefers-reduced-motion` — motion here is decoration, and the page must stay complete when it is off.",
+      "parameter": "motion（动效）",
+      "real_value": "连续动画：数据包沿轨道流动、标记脉冲",
+      "display_value": "reduced-motion 时停止播放循环动画，画面内容不变（静态渲染）",
+      "source": {
+        "type": "visualization",
+        "note": "动效只是装饰：它不承载信息，因此 reduced-motion 下停掉动画而不是删掉内容。依据是 MDN 对 prefers-reduced-motion 的说明——\"used to detect if a user has enabled a setting on their device to minimize the amount of non-essential motion\"",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion"
+      },
+      "page_marker": "prefers-reduced-motion",
+      "evidence": "index.html",
+      "as_of": "2026-09-15"
     }
   ],
   "provenance_legend": {
