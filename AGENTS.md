@@ -7,6 +7,28 @@
 `claims.json` 的 `viewer.must_contain` / `must_not_contain`,由 `verify.py` 执行——
 改数字不同步收据,门禁就红。
 
+## 三层来源(2026-09-14 起)
+
+`claims.json` 把页面上的数字分成三层,`verify.py` 分层检查,UI 也用徽章显示:
+
+| 层 | 含义 | 必填字段 | 门禁怎么查 |
+|---|---|---|---|
+| `paper`(`claims[]`) | 报告(或 2017 论文)公布的数字 | `source.section` + `source.quote`(逐字)+ `viewer.must_contain/must_not_contain` | 页面必须出现 / 必须不出现 |
+| `derived`(`derived_claims[]`) | 我方算术(36 KB/token、1M 换算、≈41×、缩放模式权重) | `source.formula` + `source.inputs` + `source.recompute{expr,expect}` | **真的 eval 一遍表达式**,与 `expect` 不符就红;页面必须出现 `page_marker` |
+| `visualization`(`visualization_claims[]`) | 为了画面做的取舍(专家阵只画一层、模块画在塔外) | `real_value` + `display_value` + `source.note` + `page_marker` | 三者齐全且页面带上说明文字 |
+
+新增一个数字时的动作:
+
+- 报告里有的 → 加进 `claims[]`,带 section 与逐字 quote
+- 自己能算的 → 加进 `derived_claims[]`,写清公式、输入、以及一条可复算的表达式
+- 只是为了画得出来 / 画得下 → 加进 `visualization_claims[]`,同时写 `real_value` 与 `display_value`
+- 报告没公布又躲不掉要展示 → 不进任何一层,写进 `removed_claims[]` 记录为什么删
+
+配色约定:徽章 `paper`(蓝)/ `derived`(紫)/ `vis`(琥珀),UI 里 `#prov-line` 渲染,
+来源与 `claims.json` 必须一致。
+
+---
+
 ## 常用命令
 
 | 用途 | 命令 |

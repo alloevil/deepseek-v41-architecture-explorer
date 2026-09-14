@@ -104,6 +104,14 @@
   #pdetail b { color: #c8d2e4; }
   #plain-line { font-size: 11.5px; color: #9fb3d1; line-height: 1.6; margin-top: 6px; }
   #plain-line b { color: #cfe0f8; }
+  #prov-line { margin-top: 7px; line-height: 1.9; }
+  #prov-line .lbl { font-size: 9.5px; color: #5d6a80; margin-right: 5px; }
+  .prov { display: inline-block; font-size: 9.5px; padding: 1px 6px; border-radius: 3px; margin: 0 4px 2px 0;
+    border: 1px solid transparent; font-variant-numeric: tabular-nums; }
+  .prov.paper { background: rgba(79,124,255,0.14); border-color: #34518f; color: #9dc0ff; }
+  .prov.derived { background: rgba(154,107,255,0.14); border-color: #55418f; color: #c3aaff; }
+  .prov.vis { background: rgba(255,207,64,0.12); border-color: #7a6524; color: #ffd98a; }
+  #prov-legend { font-size: 9.5px; color: #5d6a80; margin-top: 4px; }
   /* how to read — multi-page beginner intro */
   #howto .hpage { display: none; }
   #howto .hpage.on { display: block; }
@@ -300,6 +308,7 @@
     </div>
     <div class="t" id="ptext">Overview — 点击任意模块</div>
     <div id="plain-line"></div>
+    <div id="prov-line"></div>
     <div id="pdetail"></div>
   </div>
   <div id="stat-bar">
@@ -1131,7 +1140,7 @@ sharedCell.userData = { concept: 'ffn', side: 'right', baseColor: COLORS.moeShar
 scene.add(sharedCell); interactives.push(sharedCell);
 makeLabel('DeepSeekMoE · 384 routed(6 active)+ 1 shared', {
   pos: new THREE.Vector3(MOE_X0 + 0.2, -0.75, MOE_Z0 + 7.0),
-  size: 1.25, sub: '每层一组 · 亮格 = 本 token 激活', concept: 'ffn', side: 'right' });
+  size: 1.25, sub: '每层一组 384 个 · 画面只画一层(24×16);V4.1 实际是 40 层 × 384', concept: 'ffn', side: 'right' });
 
 /* ---------- (real shadow-mapped lighting replaces fake contact shadows) ---------- */
 
@@ -1775,6 +1784,33 @@ function renderPlain(concept) {
   if (!el) return;
   const t = PLAIN[lang][concept];
   el.innerHTML = t ? `<b>${lang === 'zh' ? '简单说' : 'In short'}:</b> ${t}` : '';
+  renderProv(concept);
+}
+// which numbers on this page come from where — mirrors claims.json's three layers
+const PROV = {
+  overview: [['paper', '552B / 8B·16B / 1M ctx'], ['derived', '41× 由本页算出']],
+  kvcache: [['paper', '890 B/token', '§abstract'], ['derived', '36 KB/token'], ['derived', '41×'], ['derived', '1M 换算']],
+  sparse: [['paper', 'm=2 / m=1, Top-512'], ['paper', '15 / 11 kernels'], ['vis', '一层画成 24×16 网格']],
+  ffn: [['paper', '384 路由 + 1 共享, 激活 6'], ['vis', '单层专家阵']],
+  memory: [['paper', '196B, 层 1 与 14'], ['vis', '模块画在塔外']],
+  attention: [['paper', '64 头 × 512, 索引器 32×128'], ['paper', 'SWA 窗口 128'], ['vis', '窗口大小不按比例']],
+  residual: [['paper', 'n = 4, Sinkhorn'], ['derived', '层高按参数量近似']],
+  input: [['paper', 'ViT 32 层 / 1024 / patch 14'], ['vis', 'ViT 画在走廊里']],
+  output: [['paper', 'DSpark 3 blocks'], ['vis', '不画抽头连线(报告未说)']],
+  posenc: [['paper', 'RoPE'], ['paper', '64K → 1M @34T']],
+};
+function renderProv(concept) {
+  const el = document.getElementById('prov-line');
+  if (!el) return;
+  const rows = PROV[concept];
+  if (!rows) { el.innerHTML = ''; return; }
+  const L = lang === 'zh';
+  el.innerHTML = `<span class="lbl">${L ? '数字来源' : 'sources'}</span>` +
+    rows.filter(r => r[1]).map(([layer, text]) =>
+      `<span class="prov ${layer}">${text}</span>`).join('') +
+    `<div id="prov-legend">${L
+      ? '<span class="prov paper">报告</span>正式报告写的 · <span class="prov derived">推导</span>本页按公式算的 · <span class="prov vis">示意</span>为了画面做的取舍'
+      : '<span class="prov paper">paper</span> published · <span class="prov derived">derived</span> our arithmetic · <span class="prov vis">schematic</span> a drawing choice'}</div>`;
 }
 function renderGlossary() {
   const body = document.getElementById('glo-body');

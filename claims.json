@@ -30,7 +30,8 @@
       "as_of": "2026-09-13",
       "source": {
         "section": "2.1 Overview / eq. (1)",
-        "quote": "We adopt a Causal Encoder-Decoder (CED) architecture, in which decoder global KV is projected from the final encoder hidden states."
+        "quote": "We adopt a Causal Encoder-Decoder (CED) architecture, in which decoder global KV is projected from the final encoder hidden states.",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -57,7 +58,8 @@
       "as_of": "2026-09-13",
       "source": {
         "section": "2.2 CED",
-        "quote": "This design allows CED to compute only the first half of the layers during the prefill phase"
+        "quote": "This design allows CED to compute only the first half of the layers during the prefill phase",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -84,7 +86,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "2.1 Overview",
-        "quote": "DeepSeek-V4.1-Flash has 552B backbone parameters"
+        "quote": "DeepSeek-V4.1-Flash has 552B backbone parameters",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -111,7 +114,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "1 Introduction (§2.1 restates the 8B/16B split)",
-        "quote": "This design enables the model to activate 8B parameters per token during prefill and 16B during decode"
+        "quote": "This design enables the model to activate 8B parameters per token during prefill and 16B during decode",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -138,7 +142,8 @@
       "as_of": "2026-09-13",
       "source": {
         "section": "1 Introduction / 2.4.4",
-        "quote": "reduce its global KV cache footprint (always in HBM) to 890 bytes per token, roughly 1/4 of the corresponding footprint of DeepSeek-V4-Flash"
+        "quote": "reduce its global KV cache footprint (always in HBM) to 890 bytes per token, roughly 1/4 of the corresponding footprint of DeepSeek-V4-Flash",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -167,7 +172,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "6 Conclusion (§1 states the same 1/8)",
-        "quote": "reduces its persistent KV cache footprint (always on SSD or in host memory) to roughly 1/8 of that of DeepSeek-V4-Flash"
+        "quote": "reduces its persistent KV cache footprint (always on SSD or in host memory) to roughly 1/8 of that of DeepSeek-V4-Flash",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -194,7 +200,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "Figure 1 caption",
-        "quote": "achieves approximately 4-fold and 437-fold reductions in per-token global KV cache size relative to DeepSeek-V4-Flash and DeepSeek-V1"
+        "quote": "achieves approximately 4-fold and 437-fold reductions in per-token global KV cache size relative to DeepSeek-V4-Flash and DeepSeek-V1",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -221,7 +228,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "2.4.4 FP4 Main KV Cache",
-        "quote": "we select E2M1 with one E4M3 scale per 16 channels"
+        "quote": "we select E2M1 with one E4M3 scale per 16 channels",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -249,7 +257,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "2.4.4 FP4 Main KV Cache",
-        "quote": "We quantize the cache after RoPE"
+        "quote": "We quantize the cache after RoPE",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -276,7 +285,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "4.2.1 Model Setups",
-        "quote": "the window size 𝑛win is set to 128"
+        "quote": "the window size 𝑛win is set to 128",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -303,7 +313,8 @@
       "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
-        "quote": "For the first two layers, we use pure sliding window attention."
+        "quote": "For the first two layers, we use pure sliding window attention.",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -330,7 +341,8 @@
       "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
-        "quote": "These layers are divided into three identically configured groups of six layers. In each group, the first layer operates in Full Mode, and the remaining five layers operate in Reuse Mode."
+        "quote": "These layers are divided into three identically configured groups of six layers. In each group, the first layer operates in Full Mode, and the remaining five layers operate in Reuse Mode.",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -357,7 +369,8 @@
       "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
-        "quote": "The 20 decoder layers use CSA2 with a compression rate of 𝑚 = 1. These layers are divided into five groups of four layers. In the first group, the first layer operates in Full Mode, and the remaining three layers operate in Reuse Mode."
+        "quote": "The 20 decoder layers use CSA2 with a compression rate of 𝑚 = 1. These layers are divided into five groups of four layers. In the first group, the first layer operates in Full Mode, and the remaining three layers operate in Reuse Mode.",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -385,7 +398,8 @@
       "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
-        "quote": "The remaining four groups share the same configuration: the first layer operates in Reindex Mode"
+        "quote": "The remaining four groups share the same configuration: the first layer operates in Reindex Mode",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -412,7 +426,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "4.2.1 Model Setups",
-        "quote": "the number of KV entries selected for sparse attention (i.e., attention top-k) to 512"
+        "quote": "the number of KV entries selected for sparse attention (i.e., attention top-k) to 512",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -439,7 +454,8 @@
       "as_of": "2026-09-13",
       "source": {
         "section": "2.3.2 Hierarchical Sparse Indexer",
-        "quote": "selecting 2,048 blocks with 8 positions each yields 16,384 candidate positions"
+        "quote": "selecting 2,048 blocks with 8 positions each yields 16,384 candidate positions",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -466,7 +482,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "4.2.1 Model Setups",
-        "quote": "We set the number of query heads to 64, the head dimension to 512, and the query compression dimension to 1280."
+        "quote": "We set the number of query heads to 64, the head dimension to 512, and the query compression dimension to 1280.",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -493,7 +510,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "4.2.1 Model Setups",
-        "quote": "we set the number of indexer query heads to 32, the indexer head dimension to 128"
+        "quote": "we set the number of indexer query heads to 32, the indexer head dimension to 128",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -520,7 +538,8 @@
       "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
-        "quote": "Each MoE layer consists of 1 shared expert and 384 routed experts, where the intermediate hidden dimension of each expert is 2304. Among the routed experts, 6 experts will be activated for each token."
+        "quote": "Each MoE layer consists of 1 shared expert and 384 routed experts, where the intermediate hidden dimension of each expert is 2304. Among the routed experts, 6 experts will be activated for each token.",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -547,7 +566,8 @@
       "as_of": "2026-09-13",
       "source": {
         "section": "4.2.1 Model Setups",
-        "quote": "As for mHC, the expansion factor is set to 4, and the number of Sinkhorn-Knopp iterations is set to 20."
+        "quote": "As for mHC, the expansion factor is set to 4, and the number of Sinkhorn-Knopp iterations is set to 20.",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -575,7 +595,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "2.4.2 Engram",
-        "quote": "We allocate 196B Engram parameters evenly across two modules."
+        "quote": "We allocate 196B Engram parameters evenly across two modules.",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -602,7 +623,8 @@
       "as_of": "2026-09-13",
       "source": {
         "section": "2.4.2 Engram",
-        "quote": "The modules are placed at layers 1 and 14 (zero-indexed)"
+        "quote": "The modules are placed at layers 1 and 14 (zero-indexed)",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -629,7 +651,8 @@
       "as_of": "2026-09-13",
       "source": {
         "section": "2.4.3 DSpark",
-        "quote": "The drafter comprises three Transformer blocks with a sliding attention window of 128 tokens. A single forward pass through these blocks computes base logits for five draft positions in parallel"
+        "quote": "The drafter comprises three Transformer blocks with a sliding attention window of 128 tokens. A single forward pass through these blocks computes base logits for five draft positions in parallel",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -657,7 +680,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "4.2.1 Model Setups",
-        "quote": "we set its number of layers to 32, the hidden dimension to 1024, the number of attention heads to 16, and the image patch size to 14"
+        "quote": "we set its number of layers to 32, the hidden dimension to 1024, the number of attention heads to 16, and the image patch size to 14",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -684,7 +708,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "2.1.1 Multimodal Architecture (vision-encoder paragraph)",
-        "quote": "supporting input resolutions up to approximately 1344 × 1344 pixels"
+        "quote": "supporting input resolutions up to approximately 1344 × 1344 pixels",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -711,7 +736,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "5.1.4 Controllable Reasoning Effort in RL",
-        "quote": "Reasoning Effort:           {effort} (range 1–100; higher values request more"
+        "quote": "Reasoning Effort:           {effort} (range 1–100; higher values request more",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -738,7 +764,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "1 Introduction",
-        "quote": "multimodal corpus comprising 45T tokens"
+        "quote": "multimodal corpus comprising 45T tokens",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -765,7 +792,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "1 Introduction (§4.2.2 states the same 64K start)",
-        "quote": "Sparse attention is trained from scratch at a sequence length of 64K, without any dense attention warmup stages."
+        "quote": "Sparse attention is trained from scratch at a sequence length of 64K, without any dense attention warmup stages.",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -792,7 +820,8 @@
       "as_of": "2026-09-14",
       "source": {
         "section": "4.2.2 Training Setups",
-        "quote": "extend the sequence length to 1M at 34T tokens"
+        "quote": "extend the sequence length to 1M at 34T tokens",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -819,7 +848,8 @@
       "as_of": "2026-09-13",
       "source": {
         "section": "absence check across the whole report",
-        "quote": "n/a - these strings do not occur anywhere in DeepSeek_V41_Tech_Report.pdf"
+        "quote": "n/a - these strings do not occur anywhere in DeepSeek_V41_Tech_Report.pdf",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [],
@@ -862,7 +892,8 @@
       },
       "source": {
         "section": "4.2.1 Model Setups",
-        "quote": "We set the number of Transformer layers to 40 and the hidden dimension 𝑑 to 5120"
+        "quote": "We set the number of Transformer layers to 40 and the hidden dimension 𝑑 to 5120",
+        "type": "paper"
       },
       "viewer": {
         "must_contain": [
@@ -922,5 +953,157 @@
       "status": "corrected to 30 (15 encoder + 15 decoder); the other 8 are 2 SWA-only + 4 Full + 4 Reindex",
       "checked": "4.2.1 group schedule, counted per group"
     }
-  ]
+  ],
+  "derived_claims": [
+    {
+      "id": "kv.naive_per_token",
+      "parameter": "naive KV bytes per token (2017 base model)",
+      "value": 36864,
+      "display": "36 KB/token",
+      "source": {
+        "type": "derived",
+        "formula": "n_attention_sites × (K + V) × d_model × bytes_per_element",
+        "inputs": [
+          "d_model = 512 (2017 paper, Table 3)",
+          "bytes_per_element = 2 (BF16)",
+          "n_attention_sites = 18 (6 encoder self-attn + 6 decoder masked self-attn + 6 decoder cross-attn; each has its own W_K, W_V)"
+        ],
+        "recompute": {
+          "expr": "18 * 2 * 512 * 2",
+          "expect": 36864
+        },
+        "note": "The 2017 paper predates KV caching; this is our own arithmetic for a naive deployment of that model — not a number the report or the 2017 paper publishes."
+      },
+      "page_marker": "36 KB/token"
+    },
+    {
+      "id": "kv.naive_at_1m",
+      "parameter": "naive KV at a 1M-token context",
+      "value": 38654705664,
+      "display": "36.0 GB (binary)",
+      "source": {
+        "type": "derived",
+        "formula": "kv_per_token_naive × tokens",
+        "inputs": [
+          "kv.naive_per_token = 36864 B",
+          "tokens = 1048576 (report: context up to 1M)"
+        ],
+        "recompute": {
+          "expr": "36864 * 1048576",
+          "expect": 38654705664
+        },
+        "note": "Displayed in binary units (GiB) but labelled GB. The exact string \"36.0 GB\" is computed at runtime into #kv-left from this value."
+      },
+      "page_marker": "36 GB"
+    },
+    {
+      "id": "kv.fp4_at_1m",
+      "parameter": "FP4 global KV at a 1M-token context",
+      "value": 933232640,
+      "display": "890 MB (binary)",
+      "source": {
+        "type": "derived",
+        "formula": "kv_bytes_per_token (report) × tokens",
+        "inputs": [
+          "kv.bytes = 890 B/token (report abstract)",
+          "tokens = 1048576"
+        ],
+        "recompute": {
+          "expr": "890 * 1048576",
+          "expect": 933232640
+        },
+        "note": "Global KV only: excludes the bounded SWA cache and the model weights (both stated in the viewer note)."
+      },
+      "page_marker": "890 MB"
+    },
+    {
+      "id": "kv.ratio_1m",
+      "parameter": "naive-vs-FP4 KV ratio",
+      "value": 41,
+      "display": "≈ 41×",
+      "source": {
+        "type": "derived",
+        "formula": "round(kv_per_token_naive / kv_per_token_fp4)",
+        "inputs": [
+          "kv.naive_per_token = 36864 B",
+          "kv.bytes = 890 B/token"
+        ],
+        "recompute": {
+          "expr": "round(36864 / 890)",
+          "expect": 41
+        },
+        "note": "Matches the report's own framing only in spirit: the report compares V4.1 against V4-Flash (4×) and V1 (437×), not against the 2017 base model."
+      },
+      "page_marker": "41×"
+    },
+    {
+      "id": "scale.bar_weights",
+      "parameter": "block heights in the by-parameters / by-activation scale modes",
+      "value": "approximate",
+      "display": "height ≈ per-block share of the parameter (or activation) budget",
+      "source": {
+        "type": "derived",
+        "formula": "height_i = weight_i / Σ weights, then normalised to the layer-mode tower height; per-block weights are our split of the report's component totals",
+        "inputs": [
+          "report: 552B backbone parameters, 8B active prefill / 16B decode, 40 layers",
+          "report: 196B Engram parameters in two modules",
+          "our split: attention share per layer, expert share per layer, memory modules at L1/L14"
+        ],
+        "recompute": null,
+        "note": "Only the totals are published; the per-block allocation is ours. The UI labels the mode as an approximation (「近似」/ “approx.”)."
+      },
+      "page_marker": "近似"
+    }
+  ],
+  "visualization_claims": [
+    {
+      "id": "vis.expert_grid",
+      "parameter": "the 384-cell expert field on the floor",
+      "real_value": "384 routed experts per layer (report §4.2.1), 40 layers, 6 activated per token",
+      "display_value": "one 24×16 grid standing for a single layer's 384 experts; the 6 lit cells are the 6 active experts",
+      "source": {
+        "type": "visualization",
+        "note": "We draw one layer, not all 40×384. The panel says so in its legend line."
+      },
+      "page_marker": "每层一组"
+    },
+    {
+      "id": "vis.toy_moe_mapping",
+      "parameter": "expert choices from the trained toy MoE",
+      "real_value": "toy model: 2 layers × 4 experts, top-2 + 1 shared, 281,282 params, trained in this repo (tools/train_tiny_moe.py)",
+      "display_value": "mapped into the first 4 columns of grid rows 0 and 1",
+      "source": {
+        "type": "visualization",
+        "note": "The routing itself is measured (real forward pass); the placement into the grid is a rendering choice, and the scale mismatch is stated in the panel."
+      },
+      "page_marker": "真实 MoE 路由"
+    },
+    {
+      "id": "vis.side_module_placement",
+      "parameter": "position of the ViT pillar, Engram modules and DSpark drafter",
+      "real_value": "ViT and projector feed the embedding (report §2.1.1); Engram writes into the residual stream at layers 1 and 14 (§2.4.2); DSpark is a speculative drafter trained after pre-training (§2.4.3)",
+      "display_value": "drawn outside the towers (corridor and left/right side), connected by wires",
+      "source": {
+        "type": "visualization",
+        "note": "Position is a layout choice, not a published fact. The report does not say which layers feed the drafter, so no tap lines are drawn."
+      },
+      "page_marker": "塔外的挂件"
+    },
+    {
+      "id": "vis.ced_boundary",
+      "parameter": "the CED boundary plane drawn between encoder and decoder",
+      "real_value": "decoder global KV is projected from H_(L/2), i.e. H₂₀ (report §2.2, eq. 1)",
+      "display_value": "a thin plane between layer 19 and layer 20 plus a dashed connector",
+      "source": {
+        "type": "visualization",
+        "note": "The boundary is a real architectural fact; the plane/dashed line are our drawing of it."
+      },
+      "page_marker": "CED"
+    }
+  ],
+  "provenance_legend": {
+    "paper": "published in the technical report (or, for the left tower, in Vaswani et al. 2017); source.section + verbatim quote required",
+    "derived": "our own arithmetic on top of published numbers; source.formula + inputs required, and verify.py re-evaluates source.recompute",
+    "visualization": "a rendering choice — the real value and the displayed value are both recorded; the page must carry the stated marker"
+  }
 }
