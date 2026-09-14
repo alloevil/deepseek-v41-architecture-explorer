@@ -94,6 +94,20 @@ tools/.venv/bin/python tools/train_tiny_moe.py --out moe-trace.json
   estimate from a deliberately simple model, and **quality stays `?`** — there is no basis
   for predicting it, so the panel says so instead of inventing a number.
 
+**Motion policy** — state transitions are cheap, decoration is not. This scene already pays for
+shadow maps, bloom, MSAA and supersampling, so the only motion added is state-driven:
+
+- highlights **cross-fade** instead of snapping (a few hundred property lerps per frame)
+- during ▶ Walk a small dot **travels** from the previous station to the current one, so the
+  token's path is visible rather than implied
+- the KV cache rail **pulses gold when a layer writes** its cache and **cyan when a layer
+  borrows** one — the 41× story as a moving picture
+- `prefers-reduced-motion: reduce` turns all of it off (instant transitions), as it should
+- the quality button shows live fps (`画质:高 · 42fps`), and `window.__fps()` exposes the number
+
+No ambient decoration (floating particles, idle rotation, breathing scales): it costs frames on
+integrated GPUs and competes with the diagram for attention.
+
 **Compare**
 - **Architectural diff** — one row per aspect (attention, KV cache, prefill, FFN, active
   params, residual, memory, decoding, vision, positions): the 2017 value next to the V4.1

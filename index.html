@@ -832,6 +832,10 @@ const MODE_NOTE = {
 // ?smoke=1 evaluates the whole module but never renders — used by tools/preflight.sh, because
 // a runtime error at module scope (e.g. a TDZ read) leaves a blank page that syntax checks miss.
 const SMOKE = new URLSearchParams(location.search).has('smoke');
+// Motion policy: state transitions are cheap (a few object properties per frame), decoration is
+// not (this scene already pays for shadows + bloom + MSAA). Respect the OS setting too.
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MOTION = !REDUCED;   // smoke mode still runs the motion logic — it only skips rendering
 const wrap = document.getElementById('canvas-wrap');
 const scene = new THREE.Scene();
 scene.background = (() => { // gradient backdrop (bloom-safe: composer needs opaque bg)
@@ -1348,6 +1352,7 @@ for (const e of [eng1, eng2]) {
 }
 
 const _wp1 = new THREE.Vector3(), _wp2 = new THREE.Vector3(), _wd = new THREE.Vector3();
+const _tmpCol = new THREE.Color();
 function updateRelLines() {
   const eff = selectedConcept;
   wireGroups.sparse = true; // group structure (1 Full + N Reuse) visible by default — it IS the CSA2 story
@@ -1375,6 +1380,26 @@ function updateRelLines() {
     }
   }
 }
+
+/* ---------- motion: one travelling dot + a KV pulse (both nearly free) ---------- */
+const flowDot = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 8),
+  new THREE.MeshBasicMaterial({ color: 0x9dc0ff, transparent: true, opacity: 0.95 }));
+flowDot.visible = false; flowDot.renderOrder = 8; scene.add(flowDot);
+let flowAnim = null;
+function startFlow(from, to) {
+  if (!MOTION || !from || !to) return;
+  const a = new THREE.Vector3(); from.getWorldPosition(a);
+  const b = new THREE.Vector3(); to.getWorldPosition(b);
+  if (a.distanceTo(b) < 0.5) return;
+  flowAnim = { a, b, t: 0 };
+  flowDot.visible = true;
+}
+const KV_PULSE_GOLD = new THREE.Color(0xffcf40), KV_PULSE_CYAN = new THREE.Color(0x18b8c8);
+let kvPulse = 0, kvPulseColor = KV_PULSE_GOLD;
+function pulseKV(color) { if (!MOTION) return; kvPulse = 1; kvPulseColor = color; }
+
+/* frame-time sampler: shows up on the quality button and at window.__fps() */
+let _fpsN = 0, _fpsT = performance.now(), _fps = 0;
 
 /* ============================================================
    Layout engine — 按层 / 按参数 / 按激活
@@ -1516,31 +1541,28 @@ function setHighlight() {
   for (const m of interactives) {
     if (m.userData.isInstanced && moeMapped) continue; // real-routing mode owns the grid
     const mat = m.material, o = m.userData.outline;
+    let tOp = 1, tEm = 1, outline = false;
     if (walkTargets) { // walkthrough owns the highlight
       const on = walkTargets.has(m);
-      mat.opacity = on ? 1 : 0.12;
-      mat.emissive.copy(m.userData.baseEmissive).multiplyScalar(on ? 0.6 : 0.15);
-      if (o) o.visible = on;
-      continue;
-    }
-    if (!eff) {
-      mat.opacity = 1;
-      mat.emissive.copy(m.userData.baseEmissive);
-      if (o) o.visible = false;
+      tOp = on ? 1 : 0.12; tEm = on ? 2.1 : 0.15; outline = on;
+    } else if (!eff) {
+      tOp = 1; tEm = 1;
     } else if (m.userData.concept === eff) {
-      mat.opacity = 1;
-      mat.emissive.copy(m.userData.baseEmissive).multiplyScalar(0.5);
+      tOp = 1; tEm = 2.1;
       // outline is a selection commitment marker — never shown on hover preview
-      if (o) o.visible = !!selectedConcept && m.userData.concept === selectedConcept;
+      outline = !!selectedConcept && m.userData.concept === selectedConcept;
     } else {
-      mat.opacity = 0.15;
-      mat.emissive.copy(m.userData.baseEmissive).multiplyScalar(0.2);
-      if (o) o.visible = false;
+      tOp = 0.15; tEm = 0.2;
     }
     // prefill phase: decoder global-attention layers are not computed (CED §2.2)
     if (phase === 'prefill' && m.userData.decoder && m.userData.concept === 'sparse') {
-      mat.opacity = Math.min(mat.opacity, 0.3);
-      if (o) o.visible = false;
+      tOp = Math.min(tOp, 0.3); outline = false;
+    }
+    m.userData.tOp = tOp; m.userData.tEm = tEm;
+    if (o) o.visible = outline;
+    if (!MOTION) { // no smoothing: apply immediately
+      mat.opacity = tOp;
+      mat.emissive.copy(m.userData.baseEmissive).multiplyScalar(tEm);
     }
   }
   if (typeof updateCellColors === 'function') updateCellColors();
@@ -1871,6 +1893,10 @@ function walkStep() {
     (layerMesh ? traceHTML(layerMesh, pos) : '');
   const link = document.getElementById('walk-realmoe');
   if (link) link.addEventListener('click', () => { stopWalk(); openRealMoe(); selectConcept('ffn'); });
+  // motion: carry the dot from the previous station to this one, and pulse the cache by action
+  const prev = walkIdx > 0 ? WALK_STEPS[walkIdx - 1].targets[0] : null;
+  startFlow(prev, s.targets[0]);
+  if (layerMesh) pulseKV(layerMesh.userData.kind === 'full' ? KV_PULSE_GOLD : KV_PULSE_CYAN);
   setHighlight();
   walkIdx++;
 }
@@ -2664,7 +2690,8 @@ let quality = 'high';
 function setQualityBtn() {
   const b = document.querySelector('#view-btns button[data-view="quality"]');
   if (!b) return;
-  b.textContent = lang === 'zh' ? (quality === 'high' ? '画质:高' : '画质:低') : (quality === 'high' ? 'HQ' : 'LQ');
+  const q = lang === 'zh' ? (quality === 'high' ? '画质:高' : '画质:低') : (quality === 'high' ? 'HQ' : 'LQ');
+  b.textContent = _fps ? `${q} · ${Math.round(_fps)}fps` : q;
   b.classList.toggle('active', quality === 'high');
 }
 function toggleQuality() {
@@ -2891,6 +2918,10 @@ window.__geom = () => ({ type: rightUnits[0].geometry.type,
   params: rightUnits[0].geometry.parameters,
   camDist: +camera.position.distanceTo(controls.target).toFixed(1) });
 window.__lift = () => +Math.max(0, ...interactives.map(m => m.userData.lift || 0)).toFixed(3);
+window.__motion = () => ({ motion: MOTION, reduced: REDUCED, dot: flowDot.visible,
+  kvPulse: +kvPulse.toFixed(2), fps: Math.round(_fps),
+  blend: +Math.max(0, ...interactives.filter(m => m.userData.tOp !== undefined)
+    .map(m => Math.abs(m.material.opacity - m.userData.tOp))).toFixed(3) });
 window.__outlines = () => interactives.filter(m => m.userData.outline && m.userData.outline.visible).length;
 window.__aa = () => ({
   pixelRatio: renderer.getPixelRatio(),
@@ -3003,6 +3034,45 @@ function step() {
     cellLift += ((targetId !== null ? 1 : 0) - cellLift) * Math.min(1, dt * 10);
     if (targetId !== null) { setCellMatrix(targetId, cellLift * 0.12); cellLiftId = targetId; }
     if (cellLiftId !== null || cellLift > 0.01) cells.instanceMatrix.needsUpdate = true;
+  }
+  // smoothed highlight: targets are set by setHighlight(), applied here (a few hundred lerps)
+  if (MOTION) {
+    const k = Math.min(1, dt * 9);
+    for (const m of interactives) {
+      if (m.userData.tOp === undefined) continue;
+      const mat = m.material;
+      mat.opacity += (m.userData.tOp - mat.opacity) * k;
+      _tmpCol.copy(m.userData.baseEmissive).multiplyScalar(m.userData.tEm);
+      mat.emissive.lerp(_tmpCol, k);
+    }
+  }
+  // the token travelling from the previous station to the current one
+  if (flowAnim) {
+    flowAnim.t = Math.min(1, flowAnim.t + dt * 1.5);
+    const e = 1 - Math.pow(1 - flowAnim.t, 3);
+    flowDot.position.lerpVectors(flowAnim.a, flowAnim.b, e);
+    flowDot.material.opacity = flowAnim.t > 0.8 ? (1 - flowAnim.t) * 4.75 : 0.95;
+    if (flowAnim.t >= 1) { flowAnim = null; flowDot.visible = false; }
+  }
+  // KV cache pulse: gold when a layer writes, cyan when a layer borrows
+  if (kvPulse > 0) {
+    kvPulse = Math.max(0, kvPulse - dt * 1.4);
+    const s = kvPulse * kvPulse;
+    kvRail.material.emissive.copy(kvPulseColor).multiplyScalar(0.25 + 2.2 * s);
+    kvRail.material.opacity = 0.3 + 0.6 * s;
+    if (kvPulse === 0) {
+      kvRail.material.emissive.copy(kvRail.userData.baseEmissive);
+      kvRail.material.opacity = 0.3;
+    }
+  }
+  // fps readout (also exposed as window.__fps())
+  _fpsN++;
+  const nowMs = performance.now();
+  if (nowMs - _fpsT > 600) {
+    _fps = (_fpsN * 1000) / (nowMs - _fpsT);
+    _fpsN = 0; _fpsT = nowMs;
+    if (!SMOKE) setQualityBtn();
+    if (window.__fpsProbe) window.__fpsProbe(_fps);
   }
   updateDynamic();
   updateRelLines();
