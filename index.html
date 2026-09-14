@@ -1252,6 +1252,15 @@ function setCellMatrix(i, dy) {
   cells.setMatrixAt(i, _cellDummy.matrix);
 }
 function updateCellColors() {
+  // walkthrough dims the field too, unless the field itself is the station
+  if (walkTargets) {
+    const on = walkTargets.has(cells);
+    cellsMat.opacity = on ? 1 : 0.15;
+    const src = on ? cellBaseColors : cellDimColors;
+    for (let i = 0; i < cellsCount; i++) cells.setColorAt(i, src[i]);
+    cells.instanceColor.needsUpdate = true;
+    return;
+  }
   // real-routing mode: light exactly the experts the trained model picked
   if (moeMapped && moeTrace) {
     const p = moePrompt(), on = new Set();
@@ -1542,9 +1551,9 @@ function setHighlight() {
     if (m.userData.isInstanced && moeMapped) continue; // real-routing mode owns the grid
     const mat = m.material, o = m.userData.outline;
     let tOp = 1, tEm = 1, outline = false;
-    if (walkTargets) { // walkthrough owns the highlight
-      const on = walkTargets.has(m);
-      tOp = on ? 1 : 0.12; tEm = on ? 2.1 : 0.15; outline = on;
+    if (walkTargets) { // walkthrough owns the highlight; no outline — the walk already has
+      const on = walkTargets.has(m);   // brightness contrast, the travelling dot and the KV pulse
+      tOp = on ? 1 : 0.12; tEm = on ? 2.1 : 0.15;
     } else if (!eff) {
       tOp = 1; tEm = 1;
     } else if (m.userData.concept === eff) {
