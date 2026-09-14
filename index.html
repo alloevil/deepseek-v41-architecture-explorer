@@ -102,6 +102,32 @@
   #walk-cap .wstop { color: #6b7690; margin-left: 8px; font-size: 10.5px; }
   #pdetail { font-size: 10.5px; color: #8d98ad; margin-top: 5px; line-height: 1.55; display: none; }
   #pdetail b { color: #c8d2e4; }
+  #plain-line { font-size: 11.5px; color: #9fb3d1; line-height: 1.6; margin-top: 6px; }
+  #plain-line b { color: #cfe0f8; }
+  /* how to read — multi-page beginner intro */
+  #howto .hpage { display: none; }
+  #howto .hpage.on { display: block; }
+  #howto .hstep { font-size: 10px; color: #5d6a80; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  #howto .hstat { display: flex; gap: 14px; margin: 10px 0 4px; }
+  #howto .hstat div { flex: 1; background: rgba(58,74,110,0.25); border-radius: 6px; padding: 7px 9px; }
+  #howto .hstat b { display: block; font-size: 16px; color: #e8ecf4; font-variant-numeric: tabular-nums; }
+  #howto .hstat span { font-size: 9.5px; color: #7d8aa0; line-height: 1.4; display: block; margin-top: 2px; }
+  #howto-nav { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  #howto-nav .hdot { width: 6px; height: 6px; border-radius: 50%; background: #2c3548; }
+  #howto-nav .hdot.on { background: #6ea8ff; }
+  /* glossary */
+  #glo-head { display: flex; justify-content: space-between; align-items: center; padding: 7px 12px 4px;
+    cursor: pointer; font-size: 10.5px; color: #8d98ad; letter-spacing: 0.5px; user-select: none; }
+  #glo-head:hover { color: #c8d2e4; }
+  #glo-wrap.collapsed #glo-body { display: none; }
+  #glo-wrap.collapsed #glo-caret { transform: rotate(-90deg); }
+  #glo-caret { font-style: normal; transition: transform 0.2s; }
+  #glo-body { padding: 0 12px 10px; border-bottom: 1px solid #1e2434; max-height: 210px; overflow-y: auto; }
+  .gterm { padding: 4px 0; border-bottom: 1px dashed #191f2d; cursor: pointer; }
+  .gterm:last-child { border-bottom: none; }
+  .gterm:hover { background: rgba(58,74,110,0.25); }
+  .gterm b { font-size: 11.5px; color: #cfe0f8; margin-right: 5px; }
+  .gterm span { font-size: 10.5px; color: #8d98ad; line-height: 1.5; }
   #pnav { padding: 8px 12px; border-bottom: 1px solid #1e2434; display: flex; flex-wrap: wrap; gap: 5px; }
   .chip {
     font-size: 10.5px; padding: 3px 9px; border-radius: 10px; border: 1px solid #2c3548;
@@ -237,6 +263,7 @@
       </span>
     </div>
     <div class="t" id="ptext">Overview — 点击任意模块</div>
+    <div id="plain-line"></div>
     <div id="pdetail"></div>
   </div>
   <div id="stat-bar">
@@ -273,6 +300,13 @@
     </div>
   </div>
   <div id="layer-view" style="display:none"></div>
+  <div id="glo-wrap" class="collapsed">
+    <div id="glo-head">
+      <span data-zh="术语表(点一条 → 塔上高亮对应结构)" data-en="Glossary (click a term → highlight it in the tower)">术语表(点一条 → 塔上高亮对应结构)</span>
+      <i id="glo-caret">▾</i>
+    </div>
+    <div id="glo-body"></div>
+  </div>
   <div id="moe-wrap" class="collapsed">
     <div id="moe-head">
       <span><span class="dot"></span><span data-zh="真实 MoE 路由(本仓库自训练的玩具模型)" data-en="Real MoE routing (toy model trained in this repo)">真实 MoE 路由(本仓库自训练的玩具模型)</span></span>
@@ -297,18 +331,36 @@
 <div id="legend"></div>
 
 <div id="howto" style="display:none">
-  <h4 data-zh="怎么读这张图" data-en="How to read this diagram">怎么读这张图</h4>
-  <ul>
-    <li data-zh="<b>颜色 = 注意力模式</b>:<span class='k' style='background:#9a6bff'></span>Full(自算 KV+索引)、<span class='k' style='background:#e07a3d'></span>Reindex(复用 KV,重打分)、<span class='k' style='background:#6f66a8'></span>Reuse(复用 KV+Top-K)、<span class='k' style='background:#18b8a8'></span>SWA(滑窗 128)"
-        data-en="<b>Colour = attention mode</b>: <span class='k' style='background:#9a6bff'></span>Full (own KV+index), <span class='k' style='background:#e07a3d'></span>Reindex (reuse KV, rescore), <span class='k' style='background:#6f66a8'></span>Reuse (reuse KV+Top-K), <span class='k' style='background:#18b8a8'></span>SWA (window 128)">…</li>
-    <li data-zh="<b>右侧括号 = 复用分组</b>:每组只有首层物化 KV,其余层复用它;<b>块右缘绿条 = 每层都有 MoE</b>(地面立方体阵是同一组 384 专家的放大示意)"
-        data-en="<b>Right brackets = reuse groups</b>: only the group's first layer materialises KV, the rest reuse it; <b>green strip on each block = MoE in every layer</b> (the cube field is the same 384 experts, magnified)">…</li>
-    <li data-zh="<b>想看懂机制</b>:点任意主干层 → 面板显示<b>该层内部数据流</b>(哪些是算的、哪些是复用、哪些写缓存);按 <b>▶ 走一遍</b> 跟随一个 token 从嵌入走到输出"
-        data-en="<b>To understand the mechanism</b>: click any backbone layer to see <b>that layer's internal dataflow</b> (what is computed, reused, or written to cache); press <b>Walk</b> to follow one token from embedding to output">…</li>
-    <li data-zh="<b>塔外挂件 = 主干之外的模块</b>:<span class='k' style='background:#2f8fd0'></span>ViT(图像输入通路)、<span class='k' style='background:#ffcf40'></span>Engram(记忆表)、<span class='k' style='background:#ff8d5c'></span>DSpark(投机解码,独立草稿头)。点击任意模块看两塔同一概念对照;↑↓ 遍历 · Esc 清除 · 空格 巡游"
-        data-en="<b>Side modules = outside the backbone</b>: <span class='k' style='background:#2f8fd0'></span>ViT (image path), <span class='k' style='background:#ffcf40'></span>Engram (memory tables), <span class='k' style='background:#ff8d5c'></span>DSpark (speculative decode, separate drafter). Click any block for a side-by-side comparison; ↑↓ walk · Esc clear · Space tour">…</li>
-  </ul>
-  <button id="howto-close" data-zh="知道了" data-en="Got it">知道了</button>
+  <div class="hpage on" data-page="0">
+    <div class="hstep" data-zh="第 1 / 2 步 · 这张图在讲什么" data-en="Step 1 / 2 · what this diagram is about">第 1 / 2 步 · 这张图在讲什么</div>
+    <div data-zh="语言模型做的事只有一件:<b>猜下一个词</b>。它一层层地读你的输入,每层干两件事 —— <b>回头看前文</b>(注意力)、<b>自己想一想</b>(FFN)。"
+      data-en="A language model does one thing: <b>guess the next token</b>. It reads your input layer by layer, and each layer does two things — <b>look back at the context</b> (attention) and <b>think it over</b> (FFN).">…</div>
+    <div class="hstat">
+      <div><b>36 GB</b><span data-zh="2017 的做法,记住 100 万 token 的上下文要这么多显存 ≈ 一整块 A100" data-en="the 2017 recipe needs this much memory to remember a 1M-token context ≈ a whole A100">…</span></div>
+      <div><b>890 MB</b><span data-zh="V4.1-Flash 只要这么多 ≈ 一个手机 App 的量级(约 1/41)" data-en="what V4.1-Flash needs ≈ a phone-app-sized footprint (about 1/41)">…</span></div>
+    </div>
+    <div data-zh="这就是右边那座塔的全部意义:<b>把记忆压缩了约 41 倍</b>,而准确率不降。接下来你可以直接点「下一步」看怎么读图,或者展开左边的<b>术语表</b>补名词。"
+      data-en="That is the whole point of the right tower: <b>memory compressed about 41×</b> with no accuracy loss. Hit Next to learn how to read the diagram, or open the <b>glossary</b> for the jargon.">…</div>
+  </div>
+  <div class="hpage" data-page="1">
+    <div class="hstep" data-zh="第 2 / 2 步 · 怎么读这张图" data-en="Step 2 / 2 · how to read it">第 2 / 2 步 · 怎么读这张图</div>
+    <ul>
+      <li data-zh="<b>颜色 = 注意力模式</b>:<span class='k' style='background:#9a6bff'></span>Full(自算缓存)、<span class='k' style='background:#e07a3d'></span>Reindex(复用缓存,重挑)、<span class='k' style='background:#6f66a8'></span>Reuse(复用缓存和选择)、<span class='k' style='background:#18b8a8'></span>SWA(只看最近 128 个)"
+        data-en="<b>Colour = attention mode</b>: <span class='k' style='background:#9a6bff'></span>Full (builds cache), <span class='k' style='background:#e07a3d'></span>Reindex (reuse cache, re-pick), <span class='k' style='background:#6f66a8'></span>Reuse (reuse cache and picks), <span class='k' style='background:#18b8a8'></span>SWA (last 128 only)">…</li>
+      <li data-zh="<b>右侧括号 = 复用分组</b>:每组只有第一层真的建缓存,其余层借它用 —— 这就是省显存的地方;<b>块右缘绿条 = 每层都有 MoE 专家</b>"
+        data-en="<b>Right brackets = reuse groups</b>: only the first layer of each group builds cache, the rest borrow it — that is where the memory saving comes from; <b>green strip = every layer has MoE experts</b>">…</li>
+      <li data-zh="<b>塔外的挂件不是层</b>:<span class='k' style='background:#2f8fd0'></span>ViT(看图)、<span class='k' style='background:#ffcf40'></span>Engram(查表记忆)、<span class='k' style='background:#ff8d5c'></span>DSpark(先猜后验)"
+        data-en="<b>Modules outside the towers are not layers</b>: <span class='k' style='background:#2f8fd0'></span>ViT (vision), <span class='k' style='background:#ffcf40'></span>Engram (lookup memory), <span class='k' style='background:#ff8d5c'></span>DSpark (draft then verify)">…</li>
+      <li data-zh="<b>想懂机制</b>:点任意层看它内部做什么;按 <b>▶ 走一遍</b> 跟着一个词走完全程;点概念按钮看两塔并排对照"
+        data-en="<b>To go deeper</b>: click a layer for its internals, press <b>▶ Walk</b> to follow one token, use the concept chips for the side-by-side comparison">…</li>
+    </ul>
+  </div>
+  <div id="howto-nav">
+    <button id="howto-prev" data-zh="上一步" data-en="Back">上一步</button>
+    <span class="hdot on"></span><span class="hdot"></span>
+    <button id="howto-next" data-zh="下一步" data-en="Next">下一步</button>
+    <button id="howto-close" data-zh="知道了" data-en="Got it">知道了</button>
+  </div>
 </div>
 
 <div id="walk-cap"></div>
@@ -1314,6 +1366,7 @@ function refreshPanel() {
   if (selectedConcept) {
     const c = SRC()[selectedConcept];
     document.getElementById('ptext').textContent = c.title;
+    renderPlain(selectedConcept);
     fillColumn(document.getElementById('col-left'), c.left);
     fillColumn(document.getElementById('col-right'), c.right);
   } else {
@@ -1323,6 +1376,7 @@ function refreshPanel() {
 
 function fillOverview() {
   document.getElementById('ptext').textContent = lang === 'zh' ? '总览 — 点击任意模块' : 'Overview — click any element';
+  renderPlain('overview');
   fillColumn(document.getElementById('col-left'), SRC().overview.left);
   fillColumn(document.getElementById('col-right'), SRC().overview.right);
 }
@@ -1333,6 +1387,7 @@ function selectConcept(concept, { showDetail = null } = {}) {
   hideLayerView();
   const c = SRC()[concept];
   document.getElementById('ptext').textContent = c.title;
+  renderPlain(concept);
   fillColumn(document.getElementById('col-left'), c.left);
   fillColumn(document.getElementById('col-right'), c.right);
   document.querySelectorAll('.chip').forEach(ch => ch.classList.toggle('active', ch.dataset.concept === concept));
@@ -1605,6 +1660,95 @@ function setMoeMapped(on) {
   document.getElementById('moe-3d').addEventListener('click', () => setMoeMapped(!moeMapped));
 })();
 
+/* ============================================================
+   Beginner layer: plain-language one-liners + glossary
+   (goal: a reader who only reads these should be able to say
+    "V4.1 wins by compressing context memory ~41×")
+   ============================================================ */
+const PLAIN = {
+  zh: {
+    overview: '左边是 2017 年的原版 Transformer,右边是 2026 年的 V4.1-Flash。看点是右边把"记住上下文"的开销压到了约 <b>1/41</b>,准确率还不降。',
+    input: '把文字(和图片)变成数字向量,网络才能算。',
+    posenc: '告诉模型"谁在前谁在后",否则"猫追狗"和"狗追猫"没区别。',
+    attention: '每个词决定该回头去看前文哪些词 —— 这是"上下文"的来源。',
+    sparse: '省钱的排班表:40 层里只有 4 层真的建缓存,其余层借用别人的,所以要记的东西少了一大截。',
+    ffn: '每个词"想一想"的那部分网络。右边把它拆成 384 个小专家,每个词只叫其中 6 个上班。',
+    residual: '给信息留一条直通车道,免得 40 层走下来把信息冲散;右边开了 4 条并行车道。',
+    memory: '右边多了一张 1960 亿参数的"查表本",把"背下来的东西"和"现场推理"分开,少算一点。',
+    kvcache: 'KV 缓存 = 模型记住前文用的笔记本。上下文越长,本子越厚,显存越吃紧 —— 这篇论文就是来省这个本子的。',
+    output: '把最后一层的结果翻译成词。右边还会"先猜 5 个词再验证",猜对就省时间。',
+  },
+  en: {
+    overview: 'Left is the 2017 Transformer, right is V4.1-Flash (2026). The point: the right one cuts the cost of <b>remembering context</b> to about <b>1/41</b>, with no accuracy loss.',
+    input: 'Turns text (and images) into vectors of numbers the network can compute with.',
+    posenc: 'Tells the model what comes before what — otherwise "cat chased dog" and "dog chased cat" look the same.',
+    attention: 'Each token decides which earlier tokens to look back at — that is where "context" comes from.',
+    sparse: 'A memory rota: only 4 of the 40 layers actually build a cache; the rest borrow one, so far less has to be remembered.',
+    ffn: 'The part where each token "thinks it over". On the right it is split into 384 small experts, and each token only calls 6 of them.',
+    residual: 'A through-lane for information so that 40 layers do not wash it out; the right tower runs 4 such lanes.',
+    memory: 'The right tower adds a 196B-parameter lookup book, separating "memorised" from "reasoned" so less compute is needed.',
+    kvcache: 'KV cache = the notebook a model uses to remember the context. Longer context → thicker notebook → more GPU memory. This paper exists to shrink it.',
+    output: 'Turns the last layer into words. On the right it also "drafts 5 tokens, then verifies", which saves time.',
+  },
+};
+// term → one plain sentence + which concept it lights up in the tower
+const GLOSSARY = [
+  ['注意力 Attention', '每个词决定回头看前文哪些位置', 'each token picks which earlier tokens to attend to', 'attention'],
+  ['SWA 滑动窗口', '只看最近 128 个词,更远的交给全局分支', 'only the last 128 tokens; older ones go to the global branch', 'attention'],
+  ['FFN 前馈网络', '每个词自己"想一想"的两层小网络', 'the two-layer net that lets each token think it over', 'ffn'],
+  ['MoE 混合专家', '把 FFN 拆成很多专家,每个词只用其中几个', 'splits the FFN into many experts, each token uses a few', 'ffn'],
+  ['专家 / Expert', 'V4.1 里每层有 384 个路由专家,激活 6 个 + 1 个共享', 'V4.1 has 384 routed experts per layer, 6 active + 1 shared', 'ffn'],
+  ['路由 / Router', '给词打分、决定去哪些专家的打分器', 'the scorer that decides which experts a token goes to', 'ffn'],
+  ['KV 缓存', '模型记住前文用的笔记本,占显存的大头', 'the notebook of past keys/values — the main memory cost', 'kvcache'],
+  ['Prefill 预填充', '一次性把整段提示词读进去(算得最多)', 'reads the whole prompt in one go (the compute-heavy phase)', 'kvcache'],
+  ['Decode 解码', '一个词一个词往外蹦(每次都读缓存)', 'emits one token at a time, reading the cache each step', 'output'],
+  ['Top-K / Top-512', '从上万个位置里只挑最相关的 512 个来看', 'picks only the 512 most relevant positions out of thousands', 'sparse'],
+  ['稀疏注意力', '不再"全看",只挑少数位置算注意力', 'does not attend to everything — only a chosen few', 'sparse'],
+  ['CSA2(Full/Reindex/Reuse)', 'V4.1 的省缓存机制:一组层共用一个缓存,只有首层真算', 'V4.1\'s cache-sharing scheme: one cache per group, only the first layer builds it', 'sparse'],
+  ['CED 因果编码器-解码器', '解码器的缓存由前 20 层直接投影出来,预填充只跑一半', 'decoder cache is projected from the first 20 layers, so prefill runs half the stack', 'kvcache'],
+  ['Engram 记忆表', '一张超大的哈希查表,把"背"和"算"分开', 'a huge hash-table memory that separates memorising from computing', 'memory'],
+  ['DSpark 投机解码', '先猜 5 个词,再由主模型验证,猜对就省时间', 'drafts 5 tokens, the main model verifies — guesses save time', 'output'],
+  ['mHC 残差流', '残差开 4 条并行通道,信息更不容易被冲散', 'runs the residual as 4 parallel streams so information survives', 'residual'],
+  ['FP4 量化', '用 4 位(而不是 16 位)存缓存,显存直接省一大半', 'stores the cache in 4 bits instead of 16 — roughly halves the memory', 'kvcache'],
+  ['RoPE 位置编码', '用旋转的方式编码位置,现代模型的主流做法', 'encodes position by rotation — the modern default', 'posenc'],
+  ['1M 上下文', '一次能读进约 100 万个词 ≈ 三本书', 'about a million tokens in one go ≈ three novels', 'kvcache'],
+];
+
+function renderPlain(concept) {
+  const el = document.getElementById('plain-line');
+  if (!el) return;
+  const t = PLAIN[lang][concept];
+  el.innerHTML = t ? `<b>${lang === 'zh' ? '简单说' : 'In short'}:</b> ${t}` : '';
+}
+function renderGlossary() {
+  const body = document.getElementById('glo-body');
+  body.innerHTML = '';
+  for (const [term, zh, en, concept] of GLOSSARY) {
+    const row = document.createElement('div');
+    row.className = 'gterm'; row.tabIndex = 0; row.setAttribute('role', 'button');
+    row.innerHTML = `<b>${term}</b><span>${lang === 'zh' ? zh : en}</span>`;
+    const go = () => { focusConceptBlock(concept); };
+    row.addEventListener('click', go);
+    row.addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
+    body.appendChild(row);
+  }
+}
+// jump the tower to a representative block for a concept
+function focusConceptBlock(concept) {
+  const cands = interactives.filter(m => m.userData.concept === concept && m.userData.h0 !== undefined && !m.userData.isInstanced);
+  const m = cands.find(x => x.userData.kind) || cands.find(x => x.userData.side === 'right') || cands[0];
+  if (!m) return;
+  selectElement(m.userData, m.userData);
+  focusOn(m);
+}
+(function initBeginnerUI() {
+  const wrap = document.getElementById('glo-wrap');
+  document.getElementById('glo-head').addEventListener('click', () => {
+    const collapsed = wrap.classList.toggle('collapsed');
+    if (!collapsed) renderGlossary();
+  });
+})();
+
 // nav chips (rebuilt on language switch)
 const pnav = document.getElementById('pnav');
 function buildChips() {
@@ -1634,6 +1778,7 @@ function setLang(l) {
   buildChips();
   refreshPanel();
   if (moeTrace && !document.getElementById('moe-wrap').classList.contains('collapsed')) renderMoe();
+  if (!document.getElementById('glo-wrap').classList.contains('collapsed')) renderGlossary();
   updateModeNote();
   updateCtx();
   savePrefs();
@@ -1812,13 +1957,23 @@ addEventListener('resize', () => {
   composer.setSize(wrap.clientWidth, wrap.clientHeight);
 });
 
-// first-run "how to read" card (dismissal remembered)
+// first-run "how to read" card (dismissal remembered) + 2-page beginner intro
 (function initHowto() {
   let seen = null;
   try { seen = localStorage.getItem('dsv41-howto'); } catch {}
   if (seen === 'done') return;
   const el = document.getElementById('howto');
   el.style.display = 'block';
+  let page = 0;
+  const pages = [...el.querySelectorAll('.hpage')];
+  const dots = [...el.querySelectorAll('.hdot')];
+  function show(p) {
+    page = Math.max(0, Math.min(p, pages.length - 1));
+    pages.forEach((x, i) => x.classList.toggle('on', i === page));
+    dots.forEach((x, i) => x.classList.toggle('on', i === page));
+  }
+  document.getElementById('howto-next').addEventListener('click', () => show(page + 1));
+  document.getElementById('howto-prev').addEventListener('click', () => show(page - 1));
   document.getElementById('howto-close').addEventListener('click', () => {
     el.style.display = 'none';
     try { localStorage.setItem('dsv41-howto', 'done'); } catch {}
