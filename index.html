@@ -1410,6 +1410,51 @@ function pulseKV(color) { if (!MOTION) return; kvPulse = 1; kvPulseColor = color
 /* frame-time sampler: shows up on the quality button and at window.__fps() */
 let _fpsN = 0, _fpsT = performance.now(), _fps = 0;
 
+/* ---------- Top-512 read ticks: one instance per selected KV entry ---------- */
+const READ_TICKS = 512;
+const tickGeo = new THREE.BoxGeometry(0.07, 0.14, 0.07);
+const ticks = new THREE.InstancedMesh(tickGeo,
+  new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 }), READ_TICKS);
+ticks.frustumCulled = false; ticks.renderOrder = 7; ticks.visible = false;
+scene.add(ticks);
+const _tickDummy = new THREE.Object3D();
+const TICK_DIM = new THREE.Color(0x1b2436), TICK_LIT = new THREE.Color(0x9fe8ff);
+for (let i = 0; i < READ_TICKS; i++) ticks.setColorAt(i, TICK_DIM);
+ticks.instanceColor.needsUpdate = true;
+let ticksStart = 0, ticksOn = false;
+function layoutReadTicks() {
+  // spread them along the KV rail, following its current span
+  const rail = kvRail;
+  const y0 = rail.position.y - rail.scale.y / 2, y1 = rail.position.y + rail.scale.y / 2;
+  for (let i = 0; i < READ_TICKS; i++) {
+    const t = READ_TICKS === 1 ? 0 : i / (READ_TICKS - 1);
+    _tickDummy.position.set(rail.position.x + 0.55, y0 + (y1 - y0) * t, rail.position.z + 0.35);
+    _tickDummy.updateMatrix();
+    ticks.setMatrixAt(i, _tickDummy.matrix);
+  }
+  ticks.instanceMatrix.needsUpdate = true;
+}
+function startReadTicks() { if (!MOTION) return; ticksOn = true; ticksStart = performance.now(); ticks.visible = true; layoutReadTicks(); }
+function stopReadTicks() { ticksOn = false; ticks.visible = false; for (let i = 0; i < READ_TICKS; i++) ticks.setColorAt(i, TICK_DIM); ticks.instanceColor.needsUpdate = true; }
+
+/* ---------- reuse flow: a cyan dot running along the bracket from the group's head ---------- */
+const reuseDot = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8),
+  new THREE.MeshBasicMaterial({ color: 0x7fe0d8, transparent: true, opacity: 1 }));
+reuseDot.visible = false; reuseDot.renderOrder = 8; scene.add(reuseDot);
+let reuseAnim = null;
+function startReuseFlow(headNo, layerMesh) {
+  if (!MOTION || !layerMesh) return;
+  // the bracket runs alongside the tower at x = BX; the flow travels from the group's head up/down
+  const all = interactives.filter(m => m.userData.layerNo === headNo && m.userData.kind);
+  const head = all.find(m => m.userData.side === 'right') || all[0];
+  if (!head) return;
+  const a = new THREE.Vector3(BX + 0.0, head.position.y, REL_Z);
+  const b = new THREE.Vector3(BX + 0.0, layerMesh.position.y, REL_Z);
+  if (a.distanceTo(b) < 0.15) return;   // adjacent layers are ~0.36 apart — still worth showing
+  reuseAnim = { a, b, t: 0 };
+  reuseDot.visible = true;
+}
+
 /* ============================================================
    Layout engine — 按层 / 按参数 / 按激活
    ============================================================ */
@@ -1478,6 +1523,7 @@ function setMode(m) {
   document.querySelectorAll('.mbtn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
   updateModeNote();
   applyLayout();
+  if (ticksOn) layoutReadTicks();
   savePrefs();
   syncHash();
 }
@@ -1905,7 +1951,14 @@ function walkStep() {
   // motion: carry the dot from the previous station to this one, and pulse the cache by action
   const prev = walkIdx > 0 ? WALK_STEPS[walkIdx - 1].targets[0] : null;
   startFlow(prev, s.targets[0]);
-  if (layerMesh) pulseKV(layerMesh.userData.kind === 'full' ? KV_PULSE_GOLD : KV_PULSE_CYAN);
+  if (layerMesh) {
+    const tr = simTrace(layerMesh, 18371);
+    if (tr.k === 'swa') stopReadTicks(); else startReadTicks();
+    if (tr.k === 'reuse' || tr.k === 'reindex') startReuseFlow(tr.kvHead, layerMesh);
+    pulseKV(tr.k === 'full' ? KV_PULSE_GOLD : KV_PULSE_CYAN);
+  } else {
+    stopReadTicks();
+  }
   setHighlight();
   walkIdx++;
 }
@@ -1916,6 +1969,8 @@ function startWalk() {
 }
 function stopWalk() {
   if (walkTimer) { clearInterval(walkTimer); walkTimer = null; }
+  stopReadTicks();
+  reuseAnim = null; reuseDot.visible = false;
   if (walkTargets) { walkTargets = null; setHighlight(); }
   document.getElementById('walk-cap').style.display = 'none';
   setWalkBtn(false);
@@ -2928,6 +2983,7 @@ window.__geom = () => ({ type: rightUnits[0].geometry.type,
   camDist: +camera.position.distanceTo(controls.target).toFixed(1) });
 window.__lift = () => +Math.max(0, ...interactives.map(m => m.userData.lift || 0)).toFixed(3);
 window.__motion = () => ({ motion: MOTION, reduced: REDUCED, dot: flowDot.visible,
+  ticks: ticks.visible, reuseDot: reuseDot.visible,
   kvPulse: +kvPulse.toFixed(2), fps: Math.round(_fps),
   blend: +Math.max(0, ...interactives.filter(m => m.userData.tOp !== undefined)
     .map(m => Math.abs(m.material.opacity - m.userData.tOp))).toFixed(3) });
@@ -3062,6 +3118,23 @@ function step() {
     flowDot.position.lerpVectors(flowAnim.a, flowAnim.b, e);
     flowDot.material.opacity = flowAnim.t > 0.75 ? Math.max(0, (1 - flowAnim.t) * 4) : 1;
     if (flowAnim.t >= 1) { flowAnim = null; flowDot.visible = false; }
+  }
+  // Top-512 read ticks light up one after another (one instance = one selected entry)
+  if (ticksOn) {
+    const el = (performance.now() - ticksStart) / 420;
+    if (el >= 1.15) ticksOn = false;
+    else {
+      for (let i = 0; i < READ_TICKS; i++) ticks.setColorAt(i, el * READ_TICKS > i ? TICK_LIT : TICK_DIM);
+      ticks.instanceColor.needsUpdate = true;
+    }
+  }
+  // reuse flow: cyan dot running from the layer whose cache is borrowed to the current layer
+  if (reuseAnim) {
+    reuseAnim.t = Math.min(1, reuseAnim.t + dt * 1.15);
+    const e = 1 - Math.pow(1 - reuseAnim.t, 3);
+    reuseDot.position.lerpVectors(reuseAnim.a, reuseAnim.b, e);
+    reuseDot.material.opacity = reuseAnim.t > 0.8 ? Math.max(0, (1 - reuseAnim.t) * 5) : 1;
+    if (reuseAnim.t >= 1) { reuseAnim = null; reuseDot.visible = false; }
   }
   // KV cache pulse: gold when a layer writes, cyan when a layer borrows
   if (kvPulse > 0) {
