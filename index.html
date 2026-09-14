@@ -1382,8 +1382,8 @@ function updateRelLines() {
 }
 
 /* ---------- motion: one travelling dot + a KV pulse (both nearly free) ---------- */
-const flowDot = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 8),
-  new THREE.MeshBasicMaterial({ color: 0x9dc0ff, transparent: true, opacity: 0.95 }));
+const flowDot = new THREE.Mesh(new THREE.SphereGeometry(0.36, 14, 10),
+  new THREE.MeshBasicMaterial({ color: 0xcfe4ff, transparent: true, opacity: 1 }));
 flowDot.visible = false; flowDot.renderOrder = 8; scene.add(flowDot);
 let flowAnim = null;
 function startFlow(from, to) {
@@ -3048,10 +3048,10 @@ function step() {
   }
   // the token travelling from the previous station to the current one
   if (flowAnim) {
-    flowAnim.t = Math.min(1, flowAnim.t + dt * 1.5);
+    flowAnim.t = Math.min(1, flowAnim.t + dt * 1.05);
     const e = 1 - Math.pow(1 - flowAnim.t, 3);
     flowDot.position.lerpVectors(flowAnim.a, flowAnim.b, e);
-    flowDot.material.opacity = flowAnim.t > 0.8 ? (1 - flowAnim.t) * 4.75 : 0.95;
+    flowDot.material.opacity = flowAnim.t > 0.75 ? Math.max(0, (1 - flowAnim.t) * 4) : 1;
     if (flowAnim.t >= 1) { flowAnim = null; flowDot.visible = false; }
   }
   // KV cache pulse: gold when a layer writes, cyan when a layer borrows
