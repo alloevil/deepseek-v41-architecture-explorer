@@ -44,7 +44,16 @@ technical report (section references are shown in the hover tooltips).
 
 **Understand the mechanism**
 - **Click any backbone layer** → the panel switches to a per-layer dataflow cross-section: what is *computed*, what is *reused*, what is *written to cache* (colour-coded badges, tensor shapes, § references)
-- **▶ Walk (or press `W`)** → follow one token through all 40 layers, one station at a time, with a caption describing each step
+- **▶ Walk (or press `W`)** → follow one token through all 40 layers. Each station now shows an
+  **execution trace** for that layer: schedule (Full / Reindex / Reuse / SWA), global read vs
+  visible positions, window read, new KV written, which layer's cache *and* which layer's Top-512
+  indices are reused, the 6 chosen experts with weights, and the 4 mHC stream weights. Structural
+  rows are tagged `spec` (from the report); router picks, mHC weights and the shared gate are
+  **simulated with a seeded PRNG and tagged `sim`** — the panel says so and links to the measured
+  routing from the toy model. Building it surfaced a real modelling bug: the first version reused
+  "the group's head layer" for both cache and indices, but CSA2 **decouples** them — the cache
+  comes from the most recent Full layer (in the CED decoder that is always L20), while indices
+  come from the most recent index-producing layer.
 - **Phase toggle (Prefill / Decode)** → prefill dims the decoder's global-attention layers, matching the CED claim
 - **KV cost slider (4K → 1M)** → per-token cache cost for both architectures, with the ≈41× gap called out
 - **Real MoE routing** → the expert field can be driven by *measured* routing instead of an illustration: see below

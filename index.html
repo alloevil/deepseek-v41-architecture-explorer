@@ -100,6 +100,26 @@
   }
   #walk-cap b { color: #8fb4ff; margin-right: 6px; font-variant-numeric: tabular-nums; }
   #walk-cap .wstop { color: #6b7690; margin-left: 8px; font-size: 10.5px; }
+  #walk-cap .tsec { margin-top: 7px; padding-top: 6px; border-top: 1px solid #1e2434; }
+  #walk-cap .trow { display: grid; grid-template-columns: 74px 1fr; gap: 8px; font-size: 11px;
+    color: #b9c2d4; padding: 2px 0; line-height: 1.5; }
+  #walk-cap .trow .tk { color: #8d98ad; }
+  #walk-cap .trow .tv .num { font-family: ui-monospace, monospace; color: #cfe0f8; }
+  .ttag { display: inline-block; font-size: 8.5px; padding: 0 4px; border-radius: 2px; margin-left: 5px;
+    vertical-align: 1px; }
+  .ttag.spec { background: rgba(79,124,255,0.16); color: #9dc0ff; border: 1px solid #34518f; }
+  .ttag.der { background: rgba(154,107,255,0.14); color: #c3aaff; border: 1px solid #55418f; }
+  .ttag.sim { background: rgba(255,207,64,0.12); color: #ffd98a; border: 1px solid #7a6524; }
+  #walk-cap .tlink { font-size: 10px; color: #6ea8ff; cursor: pointer; margin-top: 5px; display: inline-block; }
+  #walk-cap .tlink:hover { color: #a8c8ff; }
+  #walk-cap .texperts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+  #walk-cap .texperts span { font-size: 9.5px; padding: 1px 5px; border-radius: 3px;
+    background: rgba(42,168,118,0.16); border: 1px solid #2b6b4f; color: #7fe0b4;
+    font-variant-numeric: tabular-nums; }
+  #walk-cap .tmhc { display: flex; gap: 6px; margin-top: 3px; }
+  #walk-cap .tmhc span { font-size: 9.5px; color: #7d8aa0; font-variant-numeric: tabular-nums; }
+  #walk-cap .tmhc i { display: inline-block; width: 22px; height: 4px; border-radius: 2px;
+    background: #18b8c8; margin-right: 3px; vertical-align: middle; }
   #pdetail { font-size: 10.5px; color: #8d98ad; margin-top: 5px; line-height: 1.55; display: none; }
   #pdetail b { color: #c8d2e4; }
   #plain-line { font-size: 11.5px; color: #9fb3d1; line-height: 1.6; margin-top: 6px; }
@@ -1746,14 +1766,90 @@ function setWalkBtn(playing) {
   b.textContent = playing ? (lang === 'zh' ? '⏸ 停止' : 'Stop') : (lang === 'zh' ? '▶ 走一遍' : 'Walk');
   b.classList.toggle('active', playing);
 }
+/* ---- execution trace: what one token does inside one layer ----
+   Structural fields come from the report (tagged 规范/spec); values the report does not
+   publish (router picks, mHC coefficients, per-token KV counts) are produced by a seeded
+   PRNG and tagged 模拟/sim, so nothing here pretends to be measured. */
+function mulberry32(a) {
+  return function () {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function groupHead(no) {
+  if (no >= 20) return 20 + Math.floor((no - 20) / 4) * 4;
+  if (no >= 2) return 2 + Math.floor((no - 2) / 6) * 6;
+  return no;
+}
+function simTrace(mesh, pos) {
+  const k = mesh.userData.kind, no = mesh.userData.layerNo, m = mesh.userData.m || 1;
+  const rnd = mulberry32(1000 + no * 17 + pos * 3);
+  const visible = Math.max(1, Math.min(pos + 1, 1048576));
+  // CSA2 decouples cache sharing from index reuse:
+  //   KV comes from the most recent Full layer (§2.3.1), which in the CED decoder is L20 —
+  //   the decoder has exactly one Full layer, everything after it reuses its cache;
+  //   indices come from the most recent index-producing layer (Full or Reindex).
+  const kvHead = no >= 20 ? 20 : groupHead(no);
+  const idxHead = k === 'reindex' ? no : (no >= 24 ? 24 + Math.floor((no - 24) / 4) * 4 : kvHead);
+  const experts = []; const used = new Set();
+  while (experts.length < 6) {
+    const e = Math.floor(rnd() * 384);
+    if (!used.has(e)) { used.add(e); experts.push({ e, w: +(0.25 + rnd() * 0.65).toFixed(2) }); }
+  }
+  experts.sort((a, b) => b.w - a.w);
+  const raw = [0, 1, 2, 3].map(() => 0.15 + rnd() * 0.35);
+  const sum = raw.reduce((a, b) => a + b, 0);
+  return {
+    k, no, m, visible, kvHead, idxHead,
+    globalRead: k === 'swa' ? 0 : Math.min(512, visible),
+    windowRead: 128,
+    newKV: k === 'full' ? (m > 1 ? '1 / ' + m + ' tokens' : '1 / token') : '0',
+    reuseKV: k === 'full' ? '—' : `L${kvHead} 的缓存`,
+    reuseIdx: (k === 'full' || k === 'reindex') ? '本层自选' : `L${idxHead} 的 Top-512`,
+    experts, mhc: raw.map(v => +(v / sum).toFixed(2)), shared: +(0.4 + rnd() * 0.3).toFixed(2),
+  };
+}
+function traceHTML(mesh, pos) {
+  const L = lang === 'zh';
+  const t = simTrace(mesh, pos);
+  const TAG = { spec: ['规范', 'spec'], der: ['推导', 'derived'], sim: ['模拟', 'sim'] };
+  const tg = k => `<span class="ttag ${k}">${L ? TAG[k][0] : TAG[k][1]}</span>`;
+  const modeName = { swa: 'SWA', full: `CSA2 Full (m=${t.m})`, reindex: 'CSA2 Reindex (m=1)', reuse: 'CSA2 Reuse (m=1)' }[t.k];
+  let rows = '';
+  rows += `<div class="trow"><span class="tk">${L ? '调度' : 'schedule'}</span><span class="tv"><span class="num">${modeName}</span>${tg('spec')}</span></div>`;
+  if (t.k === 'swa') {
+    rows += `<div class="trow"><span class="tk">${L ? '读取' : 'reads'}</span><span class="tv">${L ? '仅窗口内' : 'window only'} <span class="num">${t.windowRead}</span> ${L ? '个位置' : 'positions'}${tg('spec')}</span></div>`;
+  } else {
+    rows += `<div class="trow"><span class="tk">${L ? '全局读取' : 'global read'}</span><span class="tv"><span class="num">${t.globalRead}</span> / ${t.visible.toLocaleString()} ${L ? '个可见位置' : 'visible'}${tg('spec')}</span></div>`;
+    rows += `<div class="trow"><span class="tk">${L ? '窗口读取' : 'window read'}</span><span class="tv"><span class="num">${t.windowRead}</span> ${L ? '个位置' : 'positions'}${tg('spec')}</span></div>`;
+  }
+  rows += `<div class="trow"><span class="tk">${L ? '新增 KV' : 'new KV'}</span><span class="tv"><span class="num">${t.newKV}</span>${tg('der')}</span></div>`;
+  if (t.k !== 'full') {
+    rows += `<div class="trow"><span class="tk">${L ? '复用主 KV' : 'reused KV'}</span><span class="tv"><span class="num">${t.reuseKV}</span>${tg('spec')}</span></div>`;
+    rows += `<div class="trow"><span class="tk">${L ? '复用索引' : 'reused index'}</span><span class="tv"><span class="num">${t.reuseIdx}</span>${tg('spec')}</span></div>`;
+  }
+  rows += `<div class="trow"><span class="tk">MoE</span><span class="tv">${L ? '共享 1 + 路由 6/384' : 'shared 1 + routed 6/384'} <span class="num">${t.shared}</span>${tg('sim')}
+      <div class="texperts">${t.experts.map(x => `<span>#${x.e} · ${x.w}</span>`).join('')}</div></span></div>`;
+  rows += `<div class="trow"><span class="tk">mHC</span><span class="tv">${L ? '4 条流系数' : '4 stream weights'}
+      <div class="tmhc">${t.mhc.map((w, i) => `<span><i style="width:${Math.round(w * 44)}px"></i>${w}</span>`).join('')}</div>${tg('sim')}</span></div>`;
+  return `<div class="tsec">${rows}
+    <span class="tlink" id="walk-realmoe">${L ? '专家选择是模拟的(报告未公布路由权重)→ 看真实前向测出的路由' : 'expert picks are simulated (router weights unpublished) → see measured routing from a real forward pass'}</span></div>`;
+}
 function walkStep() {
   if (walkIdx >= WALK_STEPS.length) { stopWalk(); return; }
   const s = WALK_STEPS[walkIdx];
   walkTargets = new Set(s.targets);
   const cap = document.getElementById('walk-cap');
   cap.style.display = 'block';
+  const layerMesh = s.targets.find(m => m.userData && m.userData.kind);
+  const pos = 18371; // a token position deep into the context, so counts are meaningful
   cap.innerHTML = `<b>${walkIdx + 1}/${WALK_STEPS.length}</b>${lang === 'zh' ? s.zh : s.en}` +
-    `<span class="wstop">${lang === 'zh' ? 'Esc 停止' : 'Esc to stop'}</span>`;
+    `<span class="wstop">${lang === 'zh' ? 'Esc 停止' : 'Esc to stop'}</span>` +
+    (layerMesh ? traceHTML(layerMesh, pos) : '');
+  const link = document.getElementById('walk-realmoe');
+  if (link) link.addEventListener('click', () => { stopWalk(); openRealMoe(); selectConcept('ffn'); });
   setHighlight();
   walkIdx++;
 }
