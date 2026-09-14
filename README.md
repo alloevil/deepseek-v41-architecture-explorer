@@ -30,6 +30,12 @@ technical report (section references are shown in the hover tooltips).
 
 ## Features
 
+**If you have no background: start here**
+- **▶ Learn (8 steps, key `L`)** — a guided path that answers *"how am I supposed to look at this?"*: each step explains one idea in plain language, **auto-navigates the 3D view for you** (camera, highlights, opens the KV calculator / routing panel), and ends with **one check question** so you notice whether it landed. Step 1 starts from "a model only guesses the next token"; step 8 ends with the takeaway you should be able to say yourself: *V4.1 cuts the cost of remembering context to about 1/41*.
+- **Two-page intro card** on first visit: what the diagram is about (36 GB vs 890 MB at 1M tokens) and how to read it (colours, reuse brackets, side modules).
+- **Glossary drawer** — 19 terms (attention, SWA, FFN, MoE, expert, router, KV cache, prefill/decode, Top-K, CSA2 modes, CED, Engram, DSpark, mHC, FP4, RoPE, 1M context…), one plain sentence each, bilingual; clicking a term highlights the matching structure in the tower.
+- **"In short" line** above every topic's technical columns, so no topic starts with jargon.
+
 **Read the structure**
 - Two towers side by side; drag to orbit, scroll to zoom, click anything to inspect it
 - **Reuse brackets** on the right tower show which layers share KV (1 Full + N Reuse per group)

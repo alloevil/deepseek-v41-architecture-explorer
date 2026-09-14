@@ -115,6 +115,42 @@
   #howto-nav { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
   #howto-nav .hdot { width: 6px; height: 6px; border-radius: 50%; background: #2c3548; }
   #howto-nav .hdot.on { background: #6ea8ff; }
+  /* guided learning path */
+  #learn {
+    position: fixed; left: 16px; bottom: 16px; z-index: 45; width: 340px; display: none;
+    background: rgba(13,17,26,0.97); border: 1px solid #2c3548; border-radius: 10px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6); overflow: hidden;
+  }
+  #learn-head { padding: 10px 14px 6px; border-bottom: 1px solid #1e2434; display: flex; align-items: center; gap: 8px; }
+  #learn-head b { font-size: 11px; color: #8fb4ff; letter-spacing: 0.4px; }
+  #learn-head .bar { flex: 1; height: 4px; background: #161c2a; border-radius: 2px; overflow: hidden; }
+  #learn-head .bar i { display: block; height: 100%; background: linear-gradient(90deg, #6ea8ff, #b48cff); }
+  #learn-head .x { cursor: pointer; color: #6b7690; font-size: 14px; line-height: 1; }
+  #learn-head .x:hover { color: #e8ecf4; }
+  #learn-body { padding: 10px 14px 12px; }
+  #learn-title { font-size: 13px; font-weight: 600; color: #f0f3f9; margin-bottom: 6px; }
+  #learn-text { font-size: 11.5px; line-height: 1.65; color: #b9c2d4; }
+  #learn-text b { color: #e8ecf4; }
+  #learn-do { font-size: 11px; color: #8fb4ff; background: rgba(79,124,255,0.1); border-left: 2px solid #34518f;
+    padding: 6px 8px; margin-top: 8px; line-height: 1.55; border-radius: 0 4px 4px 0; }
+  #learn-quiz { margin-top: 9px; }
+  #learn-quiz .q { font-size: 11.5px; color: #dfe5f0; margin-bottom: 6px; }
+  #learn-quiz button {
+    display: block; width: 100%; text-align: left; font-size: 11px; color: #b9c2d4; margin-bottom: 4px;
+    background: rgba(30,38,54,0.8); border: 1px solid #2c3548; border-radius: 5px; padding: 6px 9px; cursor: pointer;
+  }
+  #learn-quiz button:hover { color: #e8ecf4; border-color: #4a5878; }
+  #learn-quiz button.ok { background: rgba(42,168,118,0.22); border-color: #2b6b4f; color: #a8f0cf; }
+  #learn-quiz button.no { background: rgba(255,141,92,0.16); border-color: #7a4a2c; color: #ffb99a; }
+  #learn-fb { font-size: 11px; line-height: 1.55; margin-top: 4px; color: #7fe0b4; }
+  #learn-fb.bad { color: #ffb99a; }
+  #learn-nav { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  #learn-nav button { font-size: 11px; padding: 5px 12px; border-radius: 5px; cursor: pointer;
+    background: rgba(58,74,110,0.9); color: #dfe5f0; border: 1px solid #5a6f9e; }
+  #learn-nav button.ghost { background: transparent; color: #8d98ad; border-color: #2c3548; }
+  #learn-nav button:disabled { opacity: 0.4; cursor: default; }
+  body.learning #legend { display: none; }
+  #howto-start { background: rgba(79,124,255,0.25) !important; border-color: #5a6f9e !important; color: #dce8ff !important; }
   /* glossary */
   #glo-head { display: flex; justify-content: space-between; align-items: center; padding: 7px 12px 4px;
     cursor: pointer; font-size: 10.5px; color: #8d98ad; letter-spacing: 0.5px; user-select: none; }
@@ -249,9 +285,9 @@
 </div>
 
 <div id="hint"
-  data-zh="左塔:6 编码器 + 6 解码器,d=512<br>右塔:40 层(20 因果编码器 + 20 解码器,CED)<br>右下角 ▶ 走一遍(或按 W):跟一个 token 走完 40 层 · ↑↓ 遍历 · Esc 清除"
-  data-en="Left: 6+6 enc/dec, d=512<br>Right: 40 layers (20 causal enc + 20 dec, CED)<br>bottom-right ▶ Walk (or press W): follow one token through the 40 layers · ↑↓ walk · Esc clear">
-  左塔:6 编码器 + 6 解码器,d=512<br>右塔:40 层(20 因果编码器 + 20 解码器,CED)<br>右下角 ▶ 走一遍(或按 W):跟一个 token 走完 40 层 · ↑↓ 遍历 · Esc 清除
+  data-zh="左塔:6 编码器 + 6 解码器,d=512<br>右塔:40 层(20 因果编码器 + 20 解码器,CED)<br>零基础:点右下角【跟我学】8 步看懂(或按 L) · W 走一遍 token · ↑↓ 遍历 · Esc 清除"
+  data-en="Left: 6+6 enc/dec, d=512<br>Right: 40 layers (20 causal enc + 20 dec, CED)<br>New here: press Learn (bottom-right, or key L) for the 8-step path · W walks a token · ↑↓ step · Esc clear">
+  左塔:6 编码器 + 6 解码器,d=512<br>右塔:40 层(20 因果编码器 + 20 解码器,CED)<br>零基础:点右下角【跟我学】8 步看懂(或按 L) · W 走一遍 token · ↑↓ 遍历 · Esc 清除
 </div>
 
 <div id="panel">
@@ -359,7 +395,26 @@
     <button id="howto-prev" data-zh="上一步" data-en="Back">上一步</button>
     <span class="hdot on"></span><span class="hdot"></span>
     <button id="howto-next" data-zh="下一步" data-en="Next">下一步</button>
+    <button id="howto-start" data-zh="▶ 跟我学(8 步)" data-en="▶ Learn it (8 steps)">▶ 跟我学(8 步)</button>
     <button id="howto-close" data-zh="知道了" data-en="Got it">知道了</button>
+  </div>
+</div>
+
+<div id="learn" style="display:none">
+  <div id="learn-head">
+    <b id="learn-step">第 1 / 8 步</b>
+    <span class="bar"><i id="learn-bar"></i></span>
+    <span class="x" id="learn-x" title="退出">✕</span>
+  </div>
+  <div id="learn-body">
+    <div id="learn-title"></div>
+    <div id="learn-text"></div>
+    <div id="learn-do"></div>
+    <div id="learn-quiz"></div>
+    <div id="learn-nav">
+      <button id="learn-prev" class="ghost">上一步</button>
+      <button id="learn-next">下一步</button>
+    </div>
   </div>
 </div>
 
@@ -370,6 +425,7 @@
   <button data-view="front" data-zh="前视" data-en="Front">前视</button>
   <button data-view="side" data-zh="侧视" data-en="Side">侧视</button>
   <button data-view="lines" data-zh="连线" data-en="Lines">连线</button>
+  <button data-view="learn" data-zh="跟我学" data-en="Learn" class="active">跟我学</button>
   <button data-view="walk" data-zh="▶ 走一遍" data-en="Walk">▶ 走一遍</button>
   <button data-view="quality" data-zh="画质:高" data-en="HQ">画质:高</button>
   <button data-view="tour" data-zh="▶ 巡游" data-en="Tour">▶ 巡游</button>
@@ -1749,6 +1805,200 @@ function focusConceptBlock(concept) {
   });
 })();
 
+/* ============================================================
+   Guided learning path — 8 steps: read → do (auto-navigates) → check
+   Target: someone with no background should finish able to say
+   "V4.1 cuts the cost of remembering context to about 1/41".
+   ============================================================ */
+function focusSide(concept, side) {
+  const cands = interactives.filter(m => m.userData.concept === concept && m.userData.side === side
+    && m.userData.h0 !== undefined && !m.userData.isInstanced);
+  const m = cands.find(x => x.userData.kind) || cands[0];
+  if (m) focusOn(m);
+}
+function openCtx(open = true) {
+  document.getElementById('ctx-wrap').classList.toggle('collapsed', !open);
+}
+function setCtxSlider(v) {
+  const sl = document.getElementById('ctx-slider');
+  sl.value = v; updateCtx();
+}
+async function openRealMoe() {
+  document.getElementById('moe-wrap').classList.remove('collapsed');
+  await loadMoeTrace(); renderMoe(); setMoeMapped(true);
+}
+const LEARN = [
+  {
+    zh: { title: '模型只有一个任务:猜下一个词',
+      text: '你给它一段文字,它预测最可能的下一个词;把这个词接回去,再猜下一个。这张图里所有结构,都是为这件事服务的。',
+      do: '看两塔最底部:文字先被变成向量(嵌入)。点击左塔底部的蓝色块,再点右塔同一位置做对照。',
+      q: '模型生成一句话,是一口气写完整句吗?',
+      opts: [['不是,一次一个词,前文也一起读进去', 1, '对。所以"记住前文"才是成本大头。'],
+              ['是,一次生成整句', 0, '不是。它是一个词一个词往外蹦的。']] },
+    en: { title: 'A model has one job: guess the next token',
+      text: 'Give it text; it predicts the most likely next token, appends it, and guesses again. Everything in this diagram serves that.',
+      do: 'Look at the bottom of both towers: text first becomes vectors (embeddings). Click the blue block at the left tower base, then the same spot on the right.',
+      q: 'Does a model write a whole sentence at once?',
+      opts: [['No — one token at a time, re-reading the context', 1, 'Right. That is why remembering the context is the real cost.'],
+              ['Yes, a whole sentence in one shot', 0, 'No — it emits one token at a time.']] },
+    apply: () => { selectConcept('input'); focusSide('input', 'left'); },
+  },
+  {
+    zh: { title: '每一层做两件事:回头看 + 想一想',
+      text: '回头看看:这个词该参考前文哪些词(注意力)。想一想:用它自己的小网络加工一下(FFN)。40 层就是把这两个动作重复 40 次。',
+      do: '左塔每个方块是一层,上半是注意力、下半是 FFN。点击任意一个,面板会出现两塔同一部分的对照。',
+      q: '注意力(attention)负责什么?',
+      opts: [['在词之间传递信息:决定回头看哪些位置', 1, '对。它不改变单个词,而是把别处的信息搬过来。'],
+              ['把每个词单独做非线性变换', 0, '那是 FFN 干的活;注意力负责词与词之间的信息流动。']] },
+    en: { title: 'Each layer does two things: look back, then think',
+      text: 'Look back: which earlier tokens should this one read (attention). Think: process it through its own small network (FFN). Forty layers = that pair repeated forty times.',
+      do: 'Each block in the left tower is one layer — attention on top, FFN below. Click one to get the side-by-side comparison.',
+      q: 'What does attention do?',
+      opts: [['Moves information between tokens — decides what to look back at', 1, 'Right. It does not transform a token alone; it fetches from elsewhere.'],
+              ['Applies a non-linear transform to each token separately', 0, 'That is the FFN job. Attention is the token-to-token channel.']] },
+    apply: () => { selectConcept('attention'); focusSide('attention', 'left'); },
+  },
+  {
+    zh: { title: '层数不是重点,省钱才是',
+      text: '左边 12 层(6+6),右边 40 层 —— 但左右不是"谁更深"的对比。右边真正的革新是:让每一层记住前文的成本大幅下降。',
+      do: '按"前视"看两塔全貌。注意右边每层右缘都有一条绿条 —— 那是每层都带 MoE 专家的标记。',
+      q: 'V4.1 相比 2017 原版,最主要的改变是?',
+      opts: [['把记住上下文的成本压到约 1/41', 1, '对,这就是这张图的主题。'],
+              ['单纯把层数从 12 层加到 40 层', 0, '层数只是规模;真正省下来的是缓存成本。']] },
+    en: { title: 'Depth is not the point — cost is',
+      text: 'Left is 12 layers, right is 40 — but this is not a "deeper wins" comparison. The real change on the right: remembering the context gets far cheaper.',
+      do: 'Hit Front to see both towers. Note the green strip on every right-tower block — that marks MoE experts in every layer.',
+      q: 'What is V4.1\'s main change over the 2017 original?',
+      opts: [['It cuts the cost of remembering context to about 1/41', 1, 'Yes — that is the theme of this diagram.'],
+              ['It just stacks 12 layers up to 40', 0, 'Depth is only scale; the saving is in the cache.']] },
+    apply: () => { selectConcept('overview'); flyTo(HOME_POS, HOME_TGT); },
+  },
+  {
+    zh: { title: '记忆为什么贵',
+      text: '为了不重复计算,模型把前文的键值对存下来(KV 缓存)。上下文翻倍,缓存也翻倍 —— 长对话、长文档时,它比模型本身还占地方。',
+      do: '面板里打开「KV 成本计算器」,把滑块拖到最右(100 万 token),看两侧数字差多少。',
+      q: '100 万 token 上下文,2017 的做法要多少显存?',
+      opts: [['约 36 GB —— 一整块 A100 的量级', 1, '对。这就是长上下文贵的原因。'],
+              ['约 1 GB 以内,可以忽略', 0, '远不止。按 36 KB/token 算,100 万 token 是 36 GB。']] },
+    en: { title: 'Why memory is expensive',
+      text: 'To avoid recomputing, the model stores past keys and values (the KV cache). Double the context, double the cache — on long chats it outweighs the model itself.',
+      do: 'Open the KV cost calculator in the panel and drag the slider to the far right (1M tokens); compare the two numbers.',
+      q: 'A 1M-token context under the 2017 recipe needs how much memory?',
+      opts: [['About 36 GB — the size of a whole A100', 1, 'Correct. That is why long context is costly.'],
+              ['Under 1 GB, negligible', 0, 'Far more: at 36 KB/token, 1M tokens is 36 GB.']] },
+    apply: () => { openCtx(true); setCtxSlider(1000); selectConcept('kvcache'); },
+  },
+  {
+    zh: { title: 'V4.1 的答案:890 MB',
+      text: '同样 100 万 token,V4.1-Flash 只要 <b>890 MB</b>,约 <b>1/41</b>,而且评测不降。下面三步是它做到的方式。',
+      do: '切到「Prefill」视角:右边下半部分保持亮,上半部分变暗 —— 因为预填充阶段只跑前 20 层,解码器的缓存直接由第 20 层投影出来(CED)。',
+      q: '省下来的主要是什么?',
+      opts: [['缓存占用的显存(以及随之而来的搬运带宽)', 1, '对。算力、显存、带宽三者一起受益。'],
+              ['模型的参数量', 0, '参数量没变;省的是缓存。']] },
+    en: { title: 'V4.1\'s answer: 890 MB',
+      text: 'Same 1M tokens, V4.1-Flash needs <b>890 MB</b> — about <b>1/41</b> — with no benchmark loss. Three moves get it there.',
+      do: 'Switch to the Prefill phase: the lower half of the right tower stays lit while the upper half dims, because prefill runs only the first 20 layers — decoder cache is projected from layer 20 (CED).',
+      q: 'What exactly was saved?',
+      opts: [['The memory the cache occupies (and the bandwidth to move it)', 1, 'Right — compute, memory and bandwidth all benefit.'],
+              ['The number of model parameters', 0, 'Parameters are unchanged; the cache is what shrank.']] },
+    apply: () => { setPhase('prefill'); selectConcept('kvcache'); focusSide('kvcache', 'right'); },
+  },
+  {
+    zh: { title: '第一招:一组层共用一个缓存',
+      text: '40 层里只有 <b>4 层</b>真的建缓存;同一组的其他层直接<b>借用</b>它们的主缓存和索引。要记的东西因此少了一大截。',
+      do: '打开「连线」看右侧括号:每组只有首层是紫色(真算),其余是灰紫(借用)。点一个灰紫层,面板会列出它内部只做了什么。',
+      q: 'Reuse 层会自己算缓存吗?',
+      opts: [['不会 —— 它复用同组首层的缓存和已选好的 Top-K', 1, '对,这就是 40 层只有 4 次真算的原因。'],
+              ['会,每层都算自己的一份', 0, '不会。若每层都算,就没有这 41× 了。']] },
+    en: { title: 'Move 1: one cache shared by a whole group',
+      text: 'Only <b>4 of the 40 layers</b> actually build a cache; the rest of the group <b>borrow</b> their main cache and indices. Far less has to be remembered.',
+      do: 'Turn on Lines and look at the right-hand brackets: only the first layer of each group is purple (real compute), the rest are grey-purple (borrowing). Click a grey-purple layer to see what it actually does.',
+      q: 'Does a Reuse layer build its own cache?',
+      opts: [['No — it reuses the group\'s first layer cache and its Top-K picks', 1, 'Exactly — that is why only 4 of 40 layers really compute it.'],
+              ['Yes, every layer builds its own', 0, 'No — if every layer did, there would be no 41×.']] },
+    apply: () => { showAllLines = true; selectConcept('sparse'); focusSide('sparse', 'right'); },
+  },
+  {
+    zh: { title: '第二招:一次只叫几个专家',
+      text: '每层"想一想"的部分被拆成 384 个小专家,每个词只叫其中 <b>6 个</b>上班 —— 总参数很大,但每个词的计算量不变。',
+      do: '展开面板的「真实 MoE 路由」,点「映到专家阵」:那些亮起的格子,是我在本仓库里训练的小模型<b>真实跑</b>出来的专家选择,不是画出来的。',
+      q: 'MoE(混合专家)省的是什么?',
+      opts: [['每个词真正参与计算的参数量', 1, '对:参数总量上去,但激活量不变。'],
+              ['模型需要记住的上下文', 0, '那是缓存的事;MoE 省的是计算。']] },
+    en: { title: 'Move 2: call only a few experts at a time',
+      text: 'The "think" part of each layer is split into 384 small experts; each token calls only <b>6</b> of them. Total parameters are large, per-token compute is not.',
+      do: 'Expand "Real MoE routing" and press Map to grid: the lit cells are expert choices <b>measured</b> from a tiny model trained in this repo, not drawn by hand.',
+      q: 'What does MoE save?',
+      opts: [['The parameters each token actually computes with', 1, 'Yes — total parameters grow, active ones do not.'],
+              ['The context the model has to remember', 0, 'That is the cache; MoE saves compute.']] },
+    apply: () => { openRealMoe(); selectConcept('ffn'); },
+  },
+  {
+    zh: { title: '第三招:先猜 5 个词,再验证',
+      text: 'DSpark 先草拟 5 个词,主模型<b>一次</b>验证;猜对了,就省下 5 次完整前向。省的是算力,输出质量不变。',
+      do: '看右塔顶部左侧的橙色草稿块。到这里,你已经能回答开头那个问题了。',
+      q: '用一句话说清 V4.1 的核心是什么?',
+      opts: [['把记住上下文的成本压到约 1/41,而质量不降', 1, '完全正确 —— 这就是这张图要传达的全部。'],
+              ['把 552B 参数减到 8B', 0, '参数没减少:552B 是总量,8B/16B 是每个词激活的量。']] },
+    en: { title: 'Move 3: draft five tokens, then verify',
+      text: 'DSpark drafts five tokens and the main model verifies them in <b>one</b> pass. Correct guesses save five full forwards — compute saved, output unchanged.',
+      do: 'Look at the orange drafter blocks at the top-left of the right tower. By now you can answer the opening question.',
+      q: 'In one sentence, what is V4.1\'s core idea?',
+      opts: [['Cut the cost of remembering context to about 1/41, with no quality loss', 1, 'Exactly — that is the whole point of this diagram.'],
+              ['Shrink 552B parameters down to 8B', 0, 'Parameters did not shrink: 552B is the total, 8B/16B is what each token activates.']] },
+    apply: () => { selectConcept('output'); focusSide('output', 'right'); },
+  },
+];
+let learnIdx = 0, learnOn = false;
+function learnStepText(s) { return lang === 'zh' ? s.zh : s.en; }
+function renderLearn() {
+  const s = LEARN[learnIdx], t = learnStepText(s);
+  const n = LEARN.length;
+  document.getElementById('learn-step').textContent = lang === 'zh' ? `第 ${learnIdx + 1} / ${n} 步` : `Step ${learnIdx + 1} / ${n}`;
+  document.getElementById('learn-bar').style.width = `${((learnIdx + 1) / n) * 100}%`;
+  document.getElementById('learn-title').textContent = t.title;
+  document.getElementById('learn-text').innerHTML = t.text;
+  document.getElementById('learn-do').innerHTML = (lang === 'zh' ? '<b>动手:</b> ' : '<b>Do this:</b> ') + t.do;
+  const q = document.getElementById('learn-quiz');
+  q.innerHTML = `<div class="q">${t.q}</div>` +
+    t.opts.map((o, i) => `<button data-opt="${i}">${o[0]}</button>`).join('') + '<div id="learn-fb"></div>';
+  q.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    const o = t.opts[+b.dataset.opt];
+    q.querySelectorAll('button').forEach(x => x.disabled = true);
+    b.classList.add(o[1] ? 'ok' : 'no');
+    const fb = document.getElementById('learn-fb');
+    fb.textContent = (o[1] ? (lang === 'zh' ? '✓ ' : '✓ ') : '✗ ') + o[2];
+    fb.className = o[1] ? '' : 'bad';
+  }));
+  document.getElementById('learn-prev').textContent = lang === 'zh' ? '上一步' : 'Back';
+  document.getElementById('learn-next').textContent =
+    learnIdx === LEARN.length - 1 ? (lang === 'zh' ? '完成 ✓' : 'Done ✓') : (lang === 'zh' ? '下一步' : 'Next');
+  document.getElementById('learn-prev').disabled = learnIdx === 0;
+}
+function applyLearn() { const s = LEARN[learnIdx]; try { s.apply && s.apply(); } catch {} }
+function startLearn() {
+  learnOn = true;
+  learnIdx = Math.min(learnIdx, LEARN.length - 1);
+  document.getElementById('learn').style.display = 'block';
+  document.body.classList.add('learning');
+  renderLearn(); applyLearn();
+}
+function stopLearn() {
+  learnOn = false;
+  document.getElementById('learn').style.display = 'none';
+  document.body.classList.remove('learning');
+}
+(function initLearnUI() {
+  document.getElementById('learn-x').addEventListener('click', stopLearn);
+  document.getElementById('learn-prev').addEventListener('click', () => {
+    if (learnIdx > 0) { learnIdx--; renderLearn(); applyLearn(); }
+  });
+  document.getElementById('learn-next').addEventListener('click', () => {
+    if (learnIdx < LEARN.length - 1) { learnIdx++; renderLearn(); applyLearn(); }
+    else stopLearn();
+  });
+})();
+
 // nav chips (rebuilt on language switch)
 const pnav = document.getElementById('pnav');
 function buildChips() {
@@ -1777,6 +2027,7 @@ function setLang(l) {
   buildLegend();
   buildChips();
   refreshPanel();
+  if (learnOn) renderLearn();
   if (moeTrace && !document.getElementById('moe-wrap').classList.contains('collapsed')) renderMoe();
   if (!document.getElementById('glo-wrap').classList.contains('collapsed')) renderGlossary();
   updateModeNote();
@@ -1880,6 +2131,7 @@ document.querySelectorAll('#view-btns button').forEach(b => b.addEventListener('
   else if (v === 'side') flyTo(SIDE_POS, HOME_TGT);
   else if (v === 'lines') { showAllLines = !showAllLines; b.classList.toggle('active', showAllLines); }
   else if (v === 'walk') { walkTimer ? stopWalk() : startWalk(); }
+  else if (v === 'learn') { learnOn ? stopLearn() : (stopTour(), stopWalk(), startLearn()); }
   else if (v === 'quality') toggleQuality();
   else if (v === 'tour') toggleTour(b);
   else { // reset
@@ -1974,6 +2226,11 @@ addEventListener('resize', () => {
   }
   document.getElementById('howto-next').addEventListener('click', () => show(page + 1));
   document.getElementById('howto-prev').addEventListener('click', () => show(page - 1));
+  document.getElementById('howto-start').addEventListener('click', () => {
+    el.style.display = 'none';
+    try { localStorage.setItem('dsv41-howto', 'done'); } catch {}
+    startLearn();
+  });
   document.getElementById('howto-close').addEventListener('click', () => {
     el.style.display = 'none';
     try { localStorage.setItem('dsv41-howto', 'done'); } catch {}
@@ -1991,6 +2248,8 @@ addEventListener('keydown', (e) => {
     document.getElementById('pdetail').style.display = 'none';
     hideLayerView();
     syncHash();
+  } else if (e.key === 'l' || e.key === 'L') {
+    if (!(e.target instanceof HTMLInputElement)) { learnOn ? stopLearn() : (stopTour(), stopWalk(), startLearn()); e.preventDefault(); }
   } else if (e.key === 'w' || e.key === 'W') {
     walkTimer ? stopWalk() : startWalk();
     e.preventDefault();
