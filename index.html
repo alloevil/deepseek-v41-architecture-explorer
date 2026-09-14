@@ -139,6 +139,28 @@
   #vcard button.ghost { background: transparent; color: #8d98ad; border-color: #2c3548; }
   #vcard .vclose { position: absolute; top: 10px; right: 13px; cursor: pointer; color: #6b7690; font-size: 14px; }
   #vcard .vclose:hover { color: #e8ecf4; }
+  /* architectural diff */
+  #diff-head { display: flex; justify-content: space-between; align-items: center; padding: 7px 12px 4px;
+    cursor: pointer; font-size: 10.5px; color: #8d98ad; letter-spacing: 0.5px; user-select: none; }
+  #diff-head:hover { color: #c8d2e4; }
+  #diff-wrap.collapsed #diff-body { display: none; }
+  #diff-wrap.collapsed #diff-caret { transform: rotate(-90deg); }
+  #diff-caret { font-style: normal; transition: transform 0.2s; }
+  #diff-body { padding: 0 12px 10px; border-bottom: 1px solid #1e2434; max-height: 260px; overflow-y: auto; }
+  .dhead { display: grid; grid-template-columns: 92px 1fr 1fr; gap: 6px; font-size: 9.5px; color: #5d6a80;
+    text-transform: uppercase; letter-spacing: 0.6px; padding: 2px 0 4px; }
+  .drow { border-bottom: 1px dashed #191f2d; cursor: pointer; }
+  .drow:last-child { border-bottom: none; }
+  .drow:hover { background: rgba(58,74,110,0.2); }
+  .dline { display: grid; grid-template-columns: 92px 1fr 1fr; gap: 6px; align-items: baseline; padding: 5px 0; }
+  .dline .asp { font-size: 10.5px; color: #cfe0f8; }
+  .dline .lv { font-size: 10.5px; color: #9fb3d1; line-height: 1.45; }
+  .dline .lv.now { color: #b9c2d4; }
+  .dwhy { display: none; padding: 2px 0 8px 8px; border-left: 2px solid #2c3548; margin: 0 0 6px 4px; }
+  .drow.open .dwhy { display: block; }
+  .dwhy .mech { font-size: 10.5px; color: #8d98ad; line-height: 1.6; }
+  .dwhy .mech b { color: #cfe0f8; }
+  .dwhy .goal { font-size: 10.5px; color: #7fe0b4; margin-top: 5px; line-height: 1.6; }
   /* how to read — multi-page beginner intro */
   #howto .hpage { display: none; }
   #howto .hpage.on { display: block; }
@@ -393,6 +415,13 @@
       </div>
       <div id="moe-stat"></div>
     </div>
+  </div>
+  <div id="diff-wrap" class="collapsed">
+    <div id="diff-head">
+      <span data-zh="架构差异(点一行看为什么)" data-en="Architectural diff (click a row for the why)">架构差异(点一行看为什么)</span>
+      <i id="diff-caret">▾</i>
+    </div>
+    <div id="diff-body"></div>
   </div>
   <div id="panel-cols">
     <div class="col left" id="col-left"></div>
@@ -1996,6 +2025,11 @@ function focusConceptBlock(concept) {
     const collapsed = wrap.classList.toggle('collapsed');
     if (!collapsed) renderGlossary();
   });
+  const dwrap = document.getElementById('diff-wrap');
+  document.getElementById('diff-head').addEventListener('click', () => {
+    const collapsed = dwrap.classList.toggle('collapsed');
+    if (!collapsed) renderDiff();
+  });
 })();
 
 /* ============================================================
@@ -2192,6 +2226,84 @@ function stopLearn() {
   });
 })();
 
+/* ============================================================
+   Architectural diff — same aspect, two generations, and the why
+   Each row links to a receipt (click the value chip) and to a place
+   in the tower (click the row).
+   ============================================================ */
+const DIFF = [
+  { asp: ['注意力', 'Attention'], l: '稠密 O(n²),8 头全看', r: 'SWA(128) + CSA2 只读 Top-512', claim: 'indexer.topk', concept: 'attention',
+    why: { zh: '<b>稠密</b>:每个词对所有前文做点积,序列翻倍算力翻四倍。<b>SWA+CSA2</b>:近距离用窗口(128),远距离先用一个小索引器打分、只取最相关的 512 条 KV 精算。',
+      goal: { zh: '把注意力的成本从"随上下文长度平方增长"压到几乎常数。', en: 'Turn attention cost from quadratic in context length into something close to constant.' } },
+    en: { l: 'dense O(n²), all heads see everything', r: 'SWA (128) + CSA2 reads only Top-512' } },
+  { asp: ['KV 缓存', 'KV cache'], l: '每层每头都存(朴素约 36 KB/token)', r: '跨层共享 + FP4 = 890 B/token', claim: 'kv.bytes', concept: 'kvcache',
+    why: { zh: '<b>2017 的做法</b>:每层都要留一份 K/V 给自己。 <b>V4.1</b>:一组层共用一份(只有首层真算),再把它压到 4 bit。',
+      goal: { zh: '让长上下文不再被显存卡住 —— 这是整篇报告的主题。', en: 'Stop long context from being gated by GPU memory — the theme of the whole report.' } },
+    en: { l: 'every layer, every head (~36 KB/token naive)', r: 'shared across layers + FP4 = 890 B/token' } },
+  { asp: ['预填充', 'Prefill'], l: '整栈都跑一遍', r: 'CED:只跑前 20 层,解码器 KV 由 H₂₀ 投影', claim: 'arch.ced', concept: 'kvcache',
+    why: { zh: '<b>CED</b>把下半个栈的全局 KV 直接由第 20 层隐状态投影出来,于是预填充只算一半的层;局部窗口注意力照旧逐层算。',
+      goal: { zh: '输入重(长提示、工具调用)的场景下,把首字延迟和成本砍半。', en: 'Halve prefill cost and latency for input-heavy workloads.' } },
+    en: { l: 'run the whole stack', r: 'CED: only the first 20 layers; decoder KV projected from H₂₀' } },
+  { asp: ['前馈网络', 'FFN'], l: '稠密 FFN(d_ff=2048)', r: 'MoE:1 共享 + 384 路由专家', claim: 'moe.experts', concept: 'ffn',
+    why: { zh: '<b>稠密 FFN</b>:每个词都过同一套参数。<b>MoE</b>:把 FFN 拆成很多专家,路由器给每个词挑几个。',
+      goal: { zh: '参数容量上去了,但每个词的计算量不变 —— 用显存换算力。', en: 'More parameter capacity at constant per-token FLOPs — spend memory, not compute.' } },
+    en: { l: 'one dense FFN (d_ff = 2048)', r: 'MoE: 1 shared + 384 routed experts' } },
+  { asp: ['激活参数', 'Active params'], l: '全部(每词都一样)', r: '每词 6/384 + 1 共享', claim: 'moe.experts', concept: 'ffn',
+    why: { zh: '稀疏激活意味着<b>激活量</b>与<b>总量</b>解耦:V4.1 总共 552B,但每个词只带动 8B(prefill)/16B(decode)。',
+      goal: { zh: '服务成本按激活量付,而不是按总参数量付。', en: 'You pay serving cost for what is active, not for what exists.' } },
+    en: { l: 'all of them, every token', r: '6 of 384 routed + 1 shared' } },
+  { asp: ['残差流', 'Residual'], l: '1 条流 + LayerNorm', r: 'mHC:4 条并行流 + Sinkhorn 合并', claim: 'mhc.expansion', concept: 'residual',
+    why: { zh: '<b>单流</b>:40 层叠下来容易把信息冲淡。<b>mHC</b>:把残差开成 4 条并行通道,每层自己学合并系数。',
+      goal: { zh: '在深层网络里保住信息流,让"加层"仍然有效。', en: 'Keep information alive through many layers so depth keeps paying off.' } },
+    en: { l: '1 stream + LayerNorm', r: 'mHC: 4 parallel streams + Sinkhorn combine' } },
+  { asp: ['外部记忆', 'Memory'], l: '无(知识只在权重里)', r: 'Engram:196B 哈希查表 @L1/L14', claim: 'engram.params', concept: 'memory',
+    why: { zh: '<b>纯权重</b>:记东西靠参数、查东西靠算。<b>Engram</b>把"背下来的"放进可查的表里,稀疏访问,几乎不增加算力。',
+      goal: { zh: '把记忆与计算解耦,长尾知识不必挤进 FFN 权重。', en: 'Decouple memorisation from computation; long-tail facts stop competing for FFN capacity.' } },
+    en: { l: 'none — knowledge lives in the weights', r: 'Engram: 196B hash tables at L1/L14' } },
+  { asp: ['解码', 'Decoding'], l: '自回归,一次一个词', r: 'DSpark:先草拟 5 个词再验证', claim: 'dspark.blocks', concept: 'output',
+    why: { zh: '<b>自回归</b>:每个词都要一次完整前向。<b>投机解码</b>:小模块先猜 5 个,主模型一次验证,猜对了就省下 4 次前向。',
+      goal: { zh: '在不改变输出分布的前提下提高吞吐。', en: 'More throughput without changing the output distribution.' } },
+    en: { l: 'autoregressive, one token per pass', r: 'DSpark: draft 5 tokens, verify once' } },
+  { asp: ['视觉输入', 'Vision'], l: '无(纯文本)', r: 'ViT 32 层 + 3×3 pixel-unshuffle', claim: 'vit.config', concept: 'input',
+    why: { zh: '视觉塔把图切成 patch 编码成向量,经 3×3 下采样后投影进文本流 —— 和文字token走同一套主干。',
+      goal: { zh: '原生多模态:能直接看截图、图表、前端页面并自我纠错。', en: 'Native multimodal: read screenshots, charts and UIs directly.' } },
+    en: { l: 'text only', r: 'ViT 32 layers + 3×3 pixel-unshuffle' } },
+  { asp: ['位置编码', 'Positions'], l: '正弦(绝对)', r: 'RoPE;64K 起训,34T 时扩到 1M', claim: 'train.1m', concept: 'posenc',
+    why: { zh: '<b>正弦</b>把位置一次性加在输入上。<b>RoPE 等旋转式编码</b>把位置信息带进每一层的注意力计算,配合长上下文训练扩展到 1M。',
+      goal: { zh: '让模型在超长上下文里仍然分得清先后关系。', en: 'Keep order legible at very long context.' } },
+    en: { l: 'sinusoidal (absolute)', r: 'RoPE; trained from 64K, extended to 1M at 34T' } },
+];
+function renderDiff() {
+  const body = document.getElementById('diff-body');
+  const L = lang === 'zh';
+  body.innerHTML = `<div class="dhead"><span>${L ? '方面' : 'aspect'}</span><span>Transformer 2017</span><span>V4.1-Flash</span></div>` +
+    DIFF.map((d, i) => {
+      const val = L ? d.r : d.en.r;
+      const chip = d.claim
+        ? `<span class="prov paper clickable" data-claim="${d.claim}" title="${L ? '看这条数字的来源' : 'where this number comes from'}">${val}</span>`
+        : val;
+      return `<div class="drow" data-i="${i}">
+        <div class="dline">
+          <span class="asp">${L ? d.asp[0] : d.asp[1]}</span>
+          <span class="lv">${L ? d.l : d.en.l}</span>
+          <span class="lv now">${chip}</span>
+        </div>
+        <div class="dwhy">
+          <div class="mech">${d.why.zh && L ? d.why.zh : d.why.en || d.why.zh}</div>
+          <div class="goal">${L ? '换来了什么:' : 'what it buys:'} ${(L ? d.why.goal.zh : d.why.goal.en)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  body.querySelectorAll('.drow').forEach(row => row.addEventListener('click', ev => {
+    const d = DIFF[+row.dataset.i];
+    if (ev.target.closest('.prov')) return;           // the chip opens a receipt instead
+    row.classList.toggle('open');
+    if (d.concept) { selectConcept(d.concept); focusConceptBlock(d.concept); }
+  }));
+  body.querySelectorAll('.prov.clickable').forEach(sp =>
+    sp.addEventListener('click', () => openVerify(sp.dataset.claim)));
+}
+
 // nav chips (rebuilt on language switch)
 const pnav = document.getElementById('pnav');
 function buildChips() {
@@ -2223,6 +2335,7 @@ function setLang(l) {
   if (learnOn) renderLearn();
   if (moeTrace && !document.getElementById('moe-wrap').classList.contains('collapsed')) renderMoe();
   if (!document.getElementById('glo-wrap').classList.contains('collapsed')) renderGlossary();
+  if (!document.getElementById('diff-wrap').classList.contains('collapsed')) renderDiff();
   updateModeNote();
   updateCtx();
   savePrefs();

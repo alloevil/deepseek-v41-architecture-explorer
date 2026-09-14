@@ -77,6 +77,11 @@ tools/.venv/bin/python tools/train_tiny_moe.py --out moe-trace.json
 ```
 
 **Compare**
+- **Architectural diff** — one row per aspect (attention, KV cache, prefill, FFN, active
+  params, residual, memory, decoding, vision, positions): the 2017 value next to the V4.1
+  value, and clicking a row expands *why* it changed plus **what it buys**. The V4.1 value is
+  a receipt chip — click it to verify the number. Rows also jump the tower to the matching
+  structure.
 - Concept chips (input, positional, attention, sparse schedule, FFN/experts, residual, memory, KV cache, output) → side-by-side fact columns, fully bilingual (中文 / EN)
 - Keyboard: `↑↓` walk elements, `Esc` clear, `W` token walkthrough, `Space` demo tour
 - Scale modes: **by layer / by parameters / by activation** — heights morph (staggered, bottom-up) to show where the parameters and the decode-time cost actually live
