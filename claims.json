@@ -1074,6 +1074,24 @@
         "note": "Only the totals are published; the per-block allocation is ours. The UI labels the mode as an approximation (「近似」/ “approx.”)."
       },
       "page_marker": "近似"
+    },
+    {
+      "id": "cost.lab_model",
+      "parameter": "the estimated cost impact shown by the Cost lab sliders",
+      "value": "approximate",
+      "display": "bar heights and % deltas vs the real configuration (approximate)",
+      "source": {
+        "type": "derived",
+        "formula": "kvBytes = 890 B/token × (bits/4) × ctx ; swaCache ∝ swa × (bits/4) ; attnRead ∝ gTopK × (bits/4) + 0.1 × swa × (bits/4) ; moeFlops ∝ topK ; comm ∝ topK ; capacity ∝ experts",
+        "inputs": [
+          "kv.bytes = 890 B/token at FP4 (report abstract) — the anchor",
+          "report: 384 routed experts, 6 active per token, SWA window 128, Top-512, context up to 1M",
+          "our assumptions: FP8 doubles per-element size; MoE compute and all-to-all traffic scale with active experts; capacity scales with total experts"
+        ],
+        "recompute": null,
+        "note": "A deliberately simple model. It is an estimate, not a measurement, and it says nothing about quality: the panel keeps quality at \"?\" because no basis exists to predict it."
+      },
+      "page_marker": "成本实验室"
     }
   ],
   "visualization_claims": [

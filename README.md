@@ -76,6 +76,15 @@ tools/.venv/bin/pip install torch numpy --index-url https://download.pytorch.org
 tools/.venv/bin/python tools/train_tiny_moe.py --out moe-trace.json
 ```
 
+**Explore the design space**
+- **Cost lab** — turn the published knobs (routed experts 64–384, active experts 2–8, SWA
+  window, global Top-K, KV precision FP4/FP8, context 4K–1M) and watch the estimate move:
+  KV storage at that context, the bounded SWA cache, attention read per query, MoE compute,
+  all-to-all communication, and capacity — each as a bar with its % delta against the real
+  V4.1 configuration. Anchored on the reported 890 B/token; everything else is a relative
+  estimate from a deliberately simple model, and **quality stays `?`** — there is no basis
+  for predicting it, so the panel says so instead of inventing a number.
+
 **Compare**
 - **Architectural diff** — one row per aspect (attention, KV cache, prefill, FFN, active
   params, residual, memory, decoding, vision, positions): the 2017 value next to the V4.1

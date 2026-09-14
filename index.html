@@ -139,6 +139,35 @@
   #vcard button.ghost { background: transparent; color: #8d98ad; border-color: #2c3548; }
   #vcard .vclose { position: absolute; top: 10px; right: 13px; cursor: pointer; color: #6b7690; font-size: 14px; }
   #vcard .vclose:hover { color: #e8ecf4; }
+  /* cost lab */
+  #lab-head { display: flex; justify-content: space-between; align-items: center; padding: 7px 12px 4px;
+    cursor: pointer; font-size: 10.5px; color: #8d98ad; letter-spacing: 0.5px; user-select: none; }
+  #lab-head:hover { color: #c8d2e4; }
+  #lab-wrap.collapsed #lab-body { display: none; }
+  #lab-wrap.collapsed #lab-caret { transform: rotate(-90deg); }
+  #lab-caret { font-style: normal; transition: transform 0.2s; }
+  #lab-body { padding: 0 12px 12px; border-bottom: 1px solid #1e2434; }
+  .lknob { display: grid; grid-template-columns: 96px 1fr 58px; gap: 8px; align-items: center; padding: 3px 0; }
+  .lknob label { font-size: 10.5px; color: #9fb3d1; }
+  .lknob input[type=range] { width: 100%; accent-color: #2f8fd0; }
+  .lknob .kv { font-size: 10.5px; color: #cfe4f8; text-align: right; font-variant-numeric: tabular-nums; }
+  .lknob.seg { grid-template-columns: 96px 1fr; }
+  .lknob .segbtns { display: flex; gap: 5px; }
+  .lknob .segbtns button { font-size: 10px; padding: 2px 9px; border-radius: 4px; cursor: pointer;
+    background: transparent; color: #8d98ad; border: 1px solid #2c3548; }
+  .lknob .segbtns button.on { background: rgba(47,143,208,0.2); border-color: #2f8fd0; color: #cfe4f8; }
+  .lbar { display: grid; grid-template-columns: 96px 1fr 92px; gap: 8px; align-items: center; padding: 3px 0; }
+  .lbar .lb { font-size: 10.5px; color: #9fb3d1; }
+  .lbar .track { height: 9px; background: #161c2a; border-radius: 4px; overflow: hidden; position: relative; }
+  .lbar .track i { display: block; height: 100%; border-radius: 4px; transition: width 0.25s; }
+  .lbar .track .ref { position: absolute; top: -2px; bottom: -2px; width: 1px; background: #5a6f9e; }
+  .lbar .num { font-size: 10px; color: #b9c2d4; text-align: right; font-variant-numeric: tabular-nums; }
+  .lbar .num .up { color: #ffb99a; }
+  .lbar .num .down { color: #7fe0b4; }
+  #lab-quality { font-size: 11px; color: #ffd98a; margin-top: 8px; line-height: 1.55; }
+  #lab-note { font-size: 9.5px; color: #5d6a80; margin-top: 6px; line-height: 1.5; }
+  #lab-reset { margin-top: 8px; font-size: 10.5px; padding: 4px 12px; border-radius: 5px; cursor: pointer;
+    background: rgba(58,74,110,0.9); color: #dfe5f0; border: 1px solid #5a6f9e; }
   /* architectural diff */
   #diff-head { display: flex; justify-content: space-between; align-items: center; padding: 7px 12px 4px;
     cursor: pointer; font-size: 10.5px; color: #8d98ad; letter-spacing: 0.5px; user-select: none; }
@@ -422,6 +451,13 @@
       <i id="diff-caret">▾</i>
     </div>
     <div id="diff-body"></div>
+  </div>
+  <div id="lab-wrap" class="collapsed">
+    <div id="lab-head">
+      <span data-zh="成本实验室(改旋钮看估算影响)" data-en="Cost lab (turn the knobs, see the estimate)">成本实验室(改旋钮看估算影响)</span>
+      <i id="lab-caret">▾</i>
+    </div>
+    <div id="lab-body"></div>
   </div>
   <div id="panel-cols">
     <div class="col left" id="col-left"></div>
@@ -2030,6 +2066,11 @@ function focusConceptBlock(concept) {
     const collapsed = dwrap.classList.toggle('collapsed');
     if (!collapsed) renderDiff();
   });
+  const lwrap = document.getElementById('lab-wrap');
+  document.getElementById('lab-head').addEventListener('click', () => {
+    const collapsed = lwrap.classList.toggle('collapsed');
+    if (!collapsed) renderLab();
+  });
 })();
 
 /* ============================================================
@@ -2304,6 +2345,122 @@ function renderDiff() {
     sp.addEventListener('click', () => openVerify(sp.dataset.claim)));
 }
 
+/* ============================================================
+   Cost lab — a *simplified* cost model over the published config.
+   Anchored on the report's own 890 B/token at the real configuration.
+   Everything here is an estimate; quality is explicitly unknown.
+   ============================================================ */
+const LAB_REF = { experts: 384, topK: 6, swa: 128, gTopK: 512, bits: 4, ctx: 1048576 };
+const LABS = { ...LAB_REF };
+function labMetrics(s) {
+  const prec = s.bits / 4;                 // FP4 = 1, FP8 = 2
+  const kvPerToken = KV_FP4 * prec;        // B/token (KV_FP4 = 890, the reported figure at FP4)
+  return {
+    kvBytes: kvPerToken * s.ctx,           // global KV at this context length
+    swaCache: s.swa * prec,                // bounded SWA cache (relative)
+    attnRead: s.gTopK * prec + s.swa * prec * 0.1, // read volume per query (relative)
+    moeFlops: s.topK,                      // active experts drive MoE compute
+    comm: s.topK,                          // expert-parallel all-to-all tracks active experts
+    capacity: s.experts,                   // total routed experts (capability, not a cost)
+  };
+}
+const LAB_REF_M = labMetrics(LAB_REF);
+function renderLab() {
+  const body = document.getElementById('lab-body');
+  const L = lang === 'zh';
+  const knob = (id, label, min, max, step, val, unit) => `
+    <div class="lknob"><label>${label}</label>
+      <input type="range" id="lk-${id}" min="${min}" max="${max}" step="${step}" value="${val}">
+      <span class="kv" id="lv-${id}">${val}${unit || ''}</span></div>`;
+  body.innerHTML =
+    knob('experts', L ? '路由专家数' : 'routed experts', 64, 384, 64, LABS.experts) +
+    knob('topK', L ? '每词激活(个)' : 'active per token', 2, 8, 1, LABS.topK) +
+    knob('swa', L ? 'SWA 窗口' : 'SWA window', 64, 512, 64, LABS.swa) +
+    knob('gTopK', L ? '全局 Top-K' : 'global Top-K', 128, 1024, 128, LABS.gTopK) +
+    `<div class="lknob seg"><label>${L ? 'KV 精度' : 'KV precision'}</label>
+      <span class="segbtns"><button data-bits="4">FP4</button><button data-bits="8">FP8</button></div>
+      <span></span></div>` +
+    knob('ctx', L ? '上下文' : 'context', 0, 1000, 10, 1000) +
+    `<div id="lab-bars">
+      ${['kvBytes', 'swaCache', 'attnRead', 'moeFlops', 'comm', 'capacity'].map(k => `
+        <div class="lbar" data-k="${k}">
+          <span class="lb"></span>
+          <span class="track"><i></i><span class="ref"></span></span>
+          <span class="num"></span>
+        </div>`).join('')}
+    </div>
+    <div id="lab-quality"></div>
+    <div id="lab-note"></div>
+    <button id="lab-reset">${L ? '恢复 V4.1 真实配置' : 'Reset to the real V4.1 config'}</button>
+    <div style="margin-top:8px"><span class="prov derived clickable" data-claim="cost.lab_model">${L ? '模型来源' : 'model source'}</span></div>`;
+  const label = {
+    kvBytes: L ? 'KV 存储 @ 上下文' : 'KV storage @ context',
+    swaCache: L ? 'SWA 常数缓存' : 'SWA bounded cache',
+    attnRead: L ? '注意力读取 / query' : 'attention read / query',
+    moeFlops: L ? 'MoE 计算' : 'MoE compute',
+    comm: L ? '通信(all-to-all)' : 'communication (all-to-all)',
+    capacity: L ? '容量(专家总数)' : 'capacity (total experts)',
+  };
+  ['experts', 'topK', 'swa', 'gTopK', 'ctx'].forEach(id => {
+    const el = document.getElementById('lk-' + id);
+    el.addEventListener('input', () => {
+      if (id === 'ctx') LABS.ctx = Math.round(4096 * Math.pow(256, el.value / 1000));
+      else LABS[id] = +el.value;
+      updateLab();
+    });
+  });
+  body.querySelectorAll('[data-bits]').forEach(b => b.addEventListener('click', () => {
+    LABS.bits = +b.dataset.bits; updateLab();
+  }));
+  document.getElementById('lab-reset').addEventListener('click', () => {
+    Object.assign(LABS, LAB_REF);
+    const set = (id, v) => { const el = document.getElementById('lk-' + id); if (el) el.value = v; };
+    set('experts', LABS.experts); set('topK', LABS.topK); set('swa', LABS.swa);
+    set('gTopK', LABS.gTopK); set('ctx', 1000);
+    updateLab();
+  });
+  body.querySelectorAll('.prov.clickable').forEach(sp =>
+    sp.addEventListener('click', () => openVerify(sp.dataset.claim)));
+  body.querySelectorAll('.lbar').forEach(b => { b.querySelector('.lb').textContent = label[b.dataset.k]; });
+  updateLab();
+}
+function updateLab() {
+  const L = lang === 'zh';
+  const m = labMetrics(LABS);
+  const set = (id, v) => { const el = document.getElementById('lv-' + id); if (el) el.textContent = v; };
+  set('experts', LABS.experts); set('topK', LABS.topK); set('swa', LABS.swa);
+  set('gTopK', LABS.gTopK);
+  set('ctx', LABS.ctx >= 1048576 ? '1M' : Math.round(LABS.ctx / 1024) + 'K');
+  document.querySelectorAll('#lab-body .segbtns button').forEach(b =>
+    b.classList.toggle('on', +b.dataset.bits === LABS.bits));
+  const rows = {
+    kvBytes: [m.kvBytes / LAB_REF_M.kvBytes, fmtBytes(m.kvBytes)],
+    swaCache: [m.swaCache / LAB_REF_M.swaCache, '×' + (m.swaCache / LAB_REF_M.swaCache).toFixed(2)],
+    attnRead: [m.attnRead / LAB_REF_M.attnRead, '×' + (m.attnRead / LAB_REF_M.attnRead).toFixed(2)],
+    moeFlops: [m.moeFlops / LAB_REF_M.moeFlops, '×' + (m.moeFlops / LAB_REF_M.moeFlops).toFixed(2)],
+    comm: [m.comm / LAB_REF_M.comm, '×' + (m.comm / LAB_REF_M.comm).toFixed(2)],
+    capacity: [m.capacity / LAB_REF_M.capacity, '×' + (m.capacity / LAB_REF_M.capacity).toFixed(2)],
+  };
+  document.querySelectorAll('#lab-body .lbar').forEach(b => {
+    const [ratio, text] = rows[b.dataset.k];
+    const bar = b.querySelector('i');
+    const pct = Math.max(0, Math.min(ratio, 2)) * 50;   // 100% reference = half the track
+    bar.style.width = pct + '%';
+    bar.style.background = ratio > 1.02 ? 'linear-gradient(90deg,#ff8d5c,#e0563a)'
+      : ratio < 0.98 ? 'linear-gradient(90deg,#2aa876,#51e6a8)' : 'linear-gradient(90deg,#4f7cff,#6ea8ff)';
+    const delta = Math.round((ratio - 1) * 100);
+    const cls = delta > 0 ? 'up' : delta < 0 ? 'down' : '';
+    b.querySelector('.num').innerHTML = `${text}<br><span class="${cls}">${delta > 0 ? '+' : ''}${delta}%</span>`;
+  });
+  document.getElementById('lab-quality').innerHTML =
+    `<b>${L ? '质量' : 'quality'}: ?</b> — ${L
+      ? '这个模型算不出质量。改专家数/精度会改变模型能力,但我们没有任何依据预测幅度,所以留空而不是编一个数字。'
+      : 'not predictable from here. Changing expert count or precision changes capability, but we have no basis for a magnitude — so it stays unknown.'}`;
+  document.getElementById('lab-note').innerHTML = L
+    ? '简化成本模型:存储随精度、上下文线性;注意力读取随全局 Top-K 与窗口;MoE 计算与通信随激活专家数;容量随专家总数。锚点是报告公布的 890 B/token,其余为相对估算。'
+    : 'Simplified model: storage scales with precision and context; attention read with global Top-K and window; MoE compute and communication with active experts; capacity with total experts. Anchored on the reported 890 B/token; the rest are relative estimates.';
+}
+
 // nav chips (rebuilt on language switch)
 const pnav = document.getElementById('pnav');
 function buildChips() {
@@ -2336,6 +2493,7 @@ function setLang(l) {
   if (moeTrace && !document.getElementById('moe-wrap').classList.contains('collapsed')) renderMoe();
   if (!document.getElementById('glo-wrap').classList.contains('collapsed')) renderGlossary();
   if (!document.getElementById('diff-wrap').classList.contains('collapsed')) renderDiff();
+  if (!document.getElementById('lab-wrap').classList.contains('collapsed')) renderLab();
   updateModeNote();
   updateCtx();
   savePrefs();
