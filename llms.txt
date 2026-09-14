@@ -1,0 +1,25 @@
+# Transformer (2017) vs DeepSeek-V4.1-Flash (2026) — 3D Architecture Explorer
+
+> An interactive WebGL page that puts the 2017 Transformer and DeepSeek-V4.1-Flash side by side:
+> 40 layers of the CED stack, CSA2 reuse modes, per-layer MoE, FP4 KV cache and the attention
+> variants. Click a layer for its dataflow, or walk a single token through all 40 layers. Every
+> figure on the page is quoted from the technical report and re-checked in CI against a committed
+> excerpt of it, so the page cannot quietly drift from its source.
+
+## What this is
+
+- Live page: https://alloevil.github.io/deepseek-v41-architecture-explorer/
+- Source and how to run it locally: https://github.com/alloevil/deepseek-v41-architecture-explorer
+- Underlying report: DeepSeek-V4.1-Flash technical report (51 pages); the excerpt the gate checks
+  against is committed at `docs/snapshots/deepseek-v41-tech-report-2026-09-14.md` with its sha256.
+
+## Checkable claims
+
+- Every published number, and the command that recomputes it:
+  https://raw.githubusercontent.com/alloevil/deepseek-v41-architecture-explorer/main/claims.json
+- The gate that runs those commands: https://github.com/alloevil/verify-claims
+
+## Scope
+
+- English-language page; the numbers are what the report states, not measurements taken here.
+- Not affiliated with DeepSeek; the page is an independent visualisation of a published report.

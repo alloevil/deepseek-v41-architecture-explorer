@@ -841,6 +841,25 @@
           "equals": "0 of 8 found"
         }
       }
+    },
+    {
+      "id": "llms-txt-agrees-with-the-page",
+      "claim": "`llms.txt` — the machine-readable summary served with the page — states the same layer count and the same canonical URL as the page itself, so an answer engine reading one cannot get a different number than a reader of the other.",
+      "value": "40 layers, same canonical URL in both",
+      "metric": "the layer count in index.html vs llms.txt, and the URL each declares",
+      "method": "parses both files; requires the same layer number to appear in each and the canonical URL to match; fails if either document is edited to a different figure",
+      "repro": "grep -o '40-layer' index.html | head -1; grep -o '40 layers' llms.txt | head -1",
+      "evidence": "llms.txt",
+      "as_of": "2026-09-14",
+      "check": {
+        "cmd": "python3 -c \"import pathlib,re;h=pathlib.Path('index.html').read_text(encoding='utf-8');l=pathlib.Path('llms.txt').read_text(encoding='utf-8');url='https://alloevil.github.io/deepseek-v41-architecture-explorer/';ns=re.findall(r'(\\d+) layers', l);ok=all(f'{n} layer' in h for n in ns) and bool(ns);print('llms counts', sorted(set(ns)), 'each in page', ok, 'url in both', url in h and url in l);assert ok and url in h and url in l\"",
+        "expect": {
+          "contains": [
+            "each in page True url in both True"
+          ]
+        },
+        "timeout": 60
+      }
     }
   ],
   "removed_claims": [

@@ -1,0 +1,6 @@
+# The published artefacts of this repository are one interactive page and the data behind it.
+# Nothing is disallowed: there is no draft, staging or internal path published here.
+User-agent: *
+Allow: /
+
+Sitemap: https://alloevil.github.io/deepseek-v41-architecture-explorer/sitemap.xml
