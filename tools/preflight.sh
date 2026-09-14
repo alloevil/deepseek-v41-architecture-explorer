@@ -36,6 +36,32 @@ if [ -z "$VC_PY" ]; then
   exit $status
 fi
 
+step "browser smoke (?smoke=1: module must evaluate to the end)"
+CHROME="$(command -v google-chrome || command -v chromium || command -v /opt/google/chrome/chrome || true)"
+if [ -z "$CHROME" ]; then
+  echo "no chrome/chromium found — skipping (CI does not run this step)"
+else
+  # start the no-cache server if it is not already up, then load the page without rendering
+  if ! curl -sf -o /dev/null "http://127.0.0.1:8741/"; then
+    python3 serve.py 8741 >/dev/null 2>&1 &
+    SRV=$!
+    sleep 1
+  fi
+  SMOKE_ERR="$(mktemp)"
+  timeout 75 "$CHROME" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage \
+    --window-size=420,320 --virtual-time-budget=5000 --enable-logging=stderr --v=0 \
+    --dump-dom "http://127.0.0.1:8741/?smoke=1" 2>"$SMOKE_ERR" >/dev/null || true
+  if grep -qiE "uncaught" "$SMOKE_ERR"; then
+    echo "FAILED — module threw while evaluating:"
+    grep -iE "uncaught" "$SMOKE_ERR" | head -3
+    status=1
+  else
+    echo "ok — module evaluated with no uncaught error"
+  fi
+  rm -f "$SMOKE_ERR"
+  [ -n "${SRV:-}" ] && kill "$SRV" 2>/dev/null
+fi
+
 step "verify_claims check (claim shape)"
 eval "$VC_PY -m verify_claims --root . check" || status=1
 

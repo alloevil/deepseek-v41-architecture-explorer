@@ -829,6 +829,9 @@ const MODE_NOTE = {
 /* ============================================================
    Scene setup
    ============================================================ */
+// ?smoke=1 evaluates the whole module but never renders — used by tools/preflight.sh, because
+// a runtime error at module scope (e.g. a TDZ read) leaves a blank page that syntax checks miss.
+const SMOKE = new URLSearchParams(location.search).has('smoke');
 const wrap = document.getElementById('canvas-wrap');
 const scene = new THREE.Scene();
 scene.background = (() => { // gradient backdrop (bloom-safe: composer needs opaque bg)
@@ -847,7 +850,17 @@ const HOME_TGT = new THREE.Vector3(0, 9, 0);
 const SIDE_POS = new THREE.Vector3(61, 14, 0);
 camera.position.copy(HOME_POS);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+} catch (e) {
+  document.getElementById('canvas-wrap').innerHTML =
+    '<div style="padding:24px;color:#8d98ad;font:13px/1.7 system-ui">'
+    + '这个页面需要 WebGL。当前浏览器/设备没有可用的 WebGL 上下文,所以 3D 视图无法显示 —— '
+    + '右侧面板里的内容与数字来源仍然可用。<br>This page needs WebGL; the panel on the right still works.'
+    + '</div>';
+  throw e;
+}
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setSize(wrap.clientWidth, wrap.clientHeight);
@@ -912,6 +925,14 @@ const COLORS = {
   ffn: 0x2aa876, moeDormant: 0x1d4c3d, moeShared: 0x35c98a,
   engram: 0xffcf40, kv: 0xffcf40, out: 0xff8d5c, vit: 0x2f8fd0, mhc: 0x18b8c8,
 };
+
+// KV bytes per token — used by the context calculator, the cost lab and the verify cards.
+// Declared up here on purpose: module-scope code below reads it while building, and reading a
+// const before its declaration throws (that blanked the page once). Keep this line's shape —
+// the kv.bytes receipt reads the number out of it.
+const KV_NAIVE = 36 * 1024, KV_FP4 = 890;
+const KV_MAX = 1048576 * KV_NAIVE;   // left row scale: naive KV @1M
+const KV_RMAX = 1048576 * KV_FP4;    // right row scale: FP4 KV @1M
 
 function makeBlock({ x = 0, y = 0, z = 0, w, h, d, color, concept, side, label, tip,
   pW = 0, aW = 0, gap = 0.06, emissiveBoost = 0.12 }) {
@@ -2614,9 +2635,6 @@ prefillLabel.userData.phaseOnly = true;
 const ctxSlider = document.getElementById('ctx-slider');
 function fmtBytes(b) { return b >= 1073741824 ? (b / 1073741824).toFixed(1) + ' GB' : (b / 1048576).toFixed(0) + ' MB'; }
 function fmtN(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + 'M' : n >= 1024 ? Math.round(n / 1024) + 'K' : String(n); }
-const KV_NAIVE = 36 * 1024, KV_FP4 = 890;                 // bytes per token
-const KV_MAX = 1048576 * KV_NAIVE;                        // left row scale: naive KV @1M
-const KV_RMAX = 1048576 * KV_FP4;                         // right row scale: FP4 KV @1M
 function updateCtx() {
   const t = ctxSlider.value / 1000;
   const n = Math.round(4096 * Math.pow(256, t)); // 4K → 1M, log scale
@@ -3003,8 +3021,10 @@ function step() {
     s.visible = s.material.opacity > 0.02;
   }
   controls.update();
-  if (quality === 'high') composer.render();
-  else renderer.render(scene, camera);
+  if (!SMOKE) {
+    if (quality === 'high') composer.render();
+    else renderer.render(scene, camera);
+  }
  } catch (e) { window.__err = String(e); }
 }
 function animate() { requestAnimationFrame(animate); step(); }
