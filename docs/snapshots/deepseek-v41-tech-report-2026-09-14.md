@@ -168,3 +168,11 @@ corresponding footprint of DeepSeek-V4-Flash. SWA Bounded Replay further reduces
 persistent KV cache footprint (always on SSD or in host memory) to roughly 1/8 of that of
 DeepSeek-V4-Flash. These reductions alleviate HBM and SSD capacity pressure while the
 ```
+
+## 1. Introduction — kernel counts of a CSA2 Reuse layer
+
+<!-- pdftotext -layout lines 202-203 -->
+```
+overlap, sharded Engram embedding tables, and inference kernel fusion. In particular, each
+CSA2 Reuse Mode layer executes with only 15 kernels during prefill and 11 during decode. We
+```

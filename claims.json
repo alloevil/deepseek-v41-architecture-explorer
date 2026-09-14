@@ -902,6 +902,27 @@
         ],
         "must_not_contain": []
       }
+    },
+    {
+      "id": "kernels.reuse",
+      "claim": "A CSA2 Reuse-mode layer executes with only 15 kernels during prefill and 11 during decode.",
+      "value": "15 kernels prefill / 11 decode",
+      "metric": "the per-layer kernel count quoted for Reuse-mode layers, shown in the sparse-schedule facts and the per-layer cross-section note",
+      "method": "read the sentinel strings out of index.html: the English fact line \"Reuse-mode layer = 15 kernels prefill / 11 decode\" and the cross-section note \"prefill 15 kernels, 11 in decode\"",
+      "source": {
+        "type": "paper",
+        "section": "1 Introduction",
+        "quote": "In particular, each CSA2 Reuse Mode layer executes with only 15 kernels during prefill and 11 during decode.",
+        "snapshot": "docs/snapshots/deepseek-v41-tech-report-2026-09-14.md — section \"1. Introduction — kernel counts of a CSA2 Reuse layer\""
+      },
+      "viewer": {
+        "must_contain": [
+          "15 kernels prefill",
+          "11 in decode",
+          "prefill 15 个 kernel"
+        ],
+        "must_not_contain": []
+      }
     }
   ],
   "removed_claims": [

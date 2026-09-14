@@ -112,6 +112,33 @@
   .prov.derived { background: rgba(154,107,255,0.14); border-color: #55418f; color: #c3aaff; }
   .prov.vis { background: rgba(255,207,64,0.12); border-color: #7a6524; color: #ffd98a; }
   #prov-legend { font-size: 9.5px; color: #5d6a80; margin-top: 4px; }
+  .prov.clickable { cursor: pointer; }
+  .prov.clickable:hover { filter: brightness(1.35); }
+  /* verify card */
+  #vcard {
+    position: fixed; z-index: 60; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 460px; max-width: calc(100vw - 40px); max-height: 78vh; overflow-y: auto; display: none;
+    background: rgba(11,15,23,0.98); border: 1px solid #35405a; border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7); padding: 14px 16px 16px;
+  }
+  #vcard h4 { font-size: 13px; color: #f0f3f9; font-weight: 600; margin-bottom: 2px; }
+  #vcard .vsub { font-size: 10.5px; color: #7d8aa0; margin-bottom: 10px; }
+  #vcard .vval { font-size: 22px; color: #e8ecf4; font-variant-numeric: tabular-nums; margin: 6px 0 10px; }
+  #vcard .vrow { font-size: 11px; color: #b9c2d4; line-height: 1.6; margin: 5px 0; }
+  #vcard .vrow b { color: #cfe0f8; }
+  #vcard code, #vcard .mono { font-family: ui-monospace, monospace; font-size: 11px; color: #9dc0ff;
+    background: rgba(79,124,255,0.1); padding: 1px 5px; border-radius: 3px; }
+  #vcard blockquote { border-left: 2px solid #34518f; padding: 4px 8px; margin: 6px 0;
+    font-size: 11px; color: #9fb3d1; line-height: 1.55; }
+  #vcard .vok { color: #7fe0b4; }
+  #vcard .vbad { color: #ffb99a; }
+  #vcard .vsec { margin-top: 10px; padding-top: 8px; border-top: 1px solid #1e2434; }
+  #vcard .vbtns { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  #vcard button { font-size: 11px; padding: 5px 12px; border-radius: 5px; cursor: pointer;
+    background: rgba(58,74,110,0.9); color: #dfe5f0; border: 1px solid #5a6f9e; }
+  #vcard button.ghost { background: transparent; color: #8d98ad; border-color: #2c3548; }
+  #vcard .vclose { position: absolute; top: 10px; right: 13px; cursor: pointer; color: #6b7690; font-size: 14px; }
+  #vcard .vclose:hover { color: #e8ecf4; }
   /* how to read — multi-page beginner intro */
   #howto .hpage { display: none; }
   #howto .hpage.on { display: block; }
@@ -426,6 +453,8 @@
     </div>
   </div>
 </div>
+
+<div id="vcard" style="display:none"><span class="vclose" id="vcard-x">✕</span><div id="vcard-body"></div></div>
 
 <div id="walk-cap"></div>
 
@@ -1788,16 +1817,19 @@ function renderPlain(concept) {
 }
 // which numbers on this page come from where — mirrors claims.json's three layers
 const PROV = {
-  overview: [['paper', '552B / 8B·16B / 1M ctx'], ['derived', '41× 由本页算出']],
-  kvcache: [['paper', '890 B/token', '§abstract'], ['derived', '36 KB/token'], ['derived', '41×'], ['derived', '1M 换算']],
-  sparse: [['paper', 'm=2 / m=1, Top-512'], ['paper', '15 / 11 kernels'], ['vis', '一层画成 24×16 网格']],
-  ffn: [['paper', '384 路由 + 1 共享, 激活 6'], ['vis', '单层专家阵']],
-  memory: [['paper', '196B, 层 1 与 14'], ['vis', '模块画在塔外']],
-  attention: [['paper', '64 头 × 512, 索引器 32×128'], ['paper', 'SWA 窗口 128'], ['vis', '窗口大小不按比例']],
-  residual: [['paper', 'n = 4, Sinkhorn'], ['derived', '层高按参数量近似']],
-  input: [['paper', 'ViT 32 层 / 1024 / patch 14'], ['vis', 'ViT 画在走廊里']],
-  output: [['paper', 'DSpark 3 blocks'], ['vis', '不画抽头连线(报告未说)']],
-  posenc: [['paper', 'RoPE'], ['paper', '64K → 1M @34T']],
+  overview: [['paper', '552B / 8B·16B / 1M ctx', 'arch.params'], ['derived', '41× 由本页算出', 'kv.ratio_1m']],
+  kvcache: [['paper', '890 B/token', 'kv.bytes'], ['derived', '36 KB/token', 'kv.naive_per_token'],
+            ['derived', '41×', 'kv.ratio_1m'], ['derived', '1M 换算', 'kv.naive_at_1m']],
+  sparse: [['paper', 'm=2 / m=1, Top-512', 'indexer.topk'], ['paper', '15 / 11 kernels', 'kernels.reuse'],
+           ['vis', '一层画成 24×16 网格', 'vis.expert_grid']],
+  ffn: [['paper', '384 路由 + 1 共享, 激活 6', 'moe.experts'], ['vis', '单层专家阵', 'vis.expert_grid']],
+  memory: [['paper', '196B, 层 1 与 14', 'engram.params'], ['vis', '模块画在塔外', 'vis.side_module_placement']],
+  attention: [['paper', '64 头 × 512', 'attn.heads'], ['paper', 'SWA 窗口 128', 'swa.window'],
+              ['paper', '索引器 32 × 128', 'indexer.heads']],
+  residual: [['paper', 'n = 4, Sinkhorn', 'mhc.expansion'], ['derived', '层高按参数量近似', 'scale.bar_weights']],
+  input: [['paper', 'ViT 32 层 / 1024 / patch 14', 'vit.config'], ['vis', 'ViT 画在走廊里', 'vis.side_module_placement']],
+  output: [['paper', 'DSpark 3 blocks', 'dspark.blocks'], ['vis', '不画抽头连线(报告未说)', 'vis.side_module_placement']],
+  posenc: [['paper', '64K → 1M @34T', 'train.1m'], ['paper', '图像分辨率上限', 'img.bound']],
 };
 function renderProv(concept) {
   const el = document.getElementById('prov-line');
@@ -1805,13 +1837,138 @@ function renderProv(concept) {
   const rows = PROV[concept];
   if (!rows) { el.innerHTML = ''; return; }
   const L = lang === 'zh';
-  el.innerHTML = `<span class="lbl">${L ? '数字来源' : 'sources'}</span>` +
-    rows.filter(r => r[1]).map(([layer, text]) =>
-      `<span class="prov ${layer}">${text}</span>`).join('') +
+  el.innerHTML = `<span class="lbl">${L ? '数字来源(点开验证)' : 'sources (click to verify)'}</span>` +
+    rows.map(([layer, text, id]) =>
+      `<span class="prov ${layer} clickable" data-claim="${id ?? ''}">${text}${id ? '' : ' ?'}</span>`).join('') +
     `<div id="prov-legend">${L
-      ? '<span class="prov paper">报告</span>正式报告写的 · <span class="prov derived">推导</span>本页按公式算的 · <span class="prov vis">示意</span>为了画面做的取舍'
-      : '<span class="prov paper">paper</span> published · <span class="prov derived">derived</span> our arithmetic · <span class="prov vis">schematic</span> a drawing choice'}</div>`;
+      ? '<span class="prov paper">报告</span>正式报告写的 · <span class="prov derived">推导</span>本页按公式算的 · <span class="prov vis">示意</span>为了画面做的取舍 · <b>?</b> 尚未登记'
+      : '<span class="prov paper">paper</span> published · <span class="prov derived">derived</span> our arithmetic · <span class="prov vis">schematic</span> a drawing choice · <b>?</b> not registered yet'}</div>`;
+  el.querySelectorAll('.prov.clickable').forEach(sp =>
+    sp.addEventListener('click', () => openVerify(sp.dataset.claim)));
 }
+
+/* ============================================================
+   Verify mode — click any number to see where it comes from:
+   layer, formula, inputs, an in-browser recomputation, and a
+   live check of the page against its own receipt.
+   ============================================================ */
+let RECEIPTS = null, PAGE_SRC = null;
+async function loadReceipts() {
+  if (RECEIPTS) return RECEIPTS;
+  const [doc, html] = await Promise.all([
+    fetch('claims.json', { cache: 'no-store' }).then(r => r.json()),
+    fetch('index.html', { cache: 'no-store' }).then(r => r.text()).catch(() => null),
+  ]);
+  PAGE_SRC = html;
+  RECEIPTS = {};
+  for (const c of doc.claims || []) RECEIPTS[c.id] = { ...c, _layer: 'paper' };
+  for (const c of doc.derived_claims || []) RECEIPTS[c.id] = { ...c, _layer: 'derived' };
+  for (const c of doc.visualization_claims || []) RECEIPTS[c.id] = { ...c, _layer: 'visualization' };
+  RECEIPTS.__doc = doc;
+  return RECEIPTS;
+}
+// the same grammar verify.py evaluates: arithmetic and round()
+function evalExpr(expr) {
+  const e = String(expr).trim();
+  if (!/^(?:round\()?[\d+\-*/(). ]+\)?$/.test(e)) return null;
+  try { return Function('"use strict";return (' + e.replace(/\bround\(/g, 'Math.round(') + ')')(); }
+  catch { return null; }
+}
+function pageCheck(c) {
+  if (!PAGE_SRC) return [null, lang === 'zh' ? '需要通过 http 打开才能自检' : 'needs http:// to self-check'];
+  if (c._layer === 'paper') {
+    const v = c.viewer || {};
+    const miss = (v.must_contain || []).filter(s => !PAGE_SRC.includes(s));
+    const bad = (v.must_not_contain || []).filter(s => PAGE_SRC.includes(s));
+    if (miss.length) return [false, (lang === 'zh' ? '页面缺少:' : 'page is missing: ') + miss.join(' · ')];
+    if (bad.length) return [false, (lang === 'zh' ? '页面不该出现:' : 'page should not contain: ') + bad.join(' · ')];
+    return [true, lang === 'zh' ? '页面与收据一致' : 'page matches the receipt'];
+  }
+  const pm = c.page_marker;
+  if (!pm) return [false, lang === 'zh' ? '收据未写 page_marker' : 'receipt has no page_marker'];
+  return [PAGE_SRC.includes(pm),
+    PAGE_SRC.includes(pm)
+      ? (lang === 'zh' ? `页面已带说明标记「${pm}」` : `page carries the stated marker “${pm}”`)
+      : (lang === 'zh' ? `页面缺少标记「${pm}」` : `page is missing the marker “${pm}”`)];
+}
+function fmtB(b) { return b >= 1073741824 ? (b / 1073741824).toFixed(1) + ' GB' : (b / 1048576).toFixed(0) + ' MB'; }
+async function openVerify(id) {
+  const card = document.getElementById('vcard');
+  const body = document.getElementById('vcard-body');
+  const L = lang === 'zh';
+  const R = await loadReceipts();
+  if (!id || !R[id]) {
+    body.innerHTML = `<h4>${L ? '这个数字还没有登记' : 'This number is not registered'}</h4>
+      <div class="vsub">claims.json</div>
+      <div class="vrow">${L
+        ? '页面上的每个数字都应该在 <code>claims.json</code> 里有一条收据(paper / derived / visualization 三层之一)。这一条还没写 —— 它就是待办清单上的下一个。'
+        : 'Every number is supposed to have a receipt in <code>claims.json</code> (one of paper / derived / visualization). This one has none yet.'}</div>`;
+    card.style.display = 'block';
+    return;
+  }
+  const c = R[id];
+  const badge = { paper: ['报告', 'paper'], derived: ['推导', 'derived'], visualization: ['示意', 'schematic'] }[c._layer];
+  const val = c.value ?? c.display_value ?? '—';
+  let html = `<h4>${c.parameter || c.claim || id}</h4>
+    <div class="vsub"><span class="prov ${c._layer}">${L ? badge[0] : badge[1]}</span> &nbsp;<code>${id}</code></div>
+    <div class="vval">${typeof val === 'number' ? val.toLocaleString() : val}</div>`;
+  if (c._layer === 'paper') {
+    html += `<div class="vrow"><b>${L ? '报告位置' : 'section'}</b>: ${c.source.section}</div>
+      <blockquote>${c.source.quote}</blockquote>`;
+    if (c.method) html += `<div class="vrow"><b>${L ? '页面怎么被检查' : 'how the page is checked'}</b>: ${c.method}</div>`;
+  } else if (c._layer === 'derived') {
+    html += `<div class="vrow"><b>${L ? '公式' : 'formula'}</b>: <span class="mono">${c.source.formula}</span></div>
+      <div class="vrow"><b>${L ? '输入' : 'inputs'}</b></div><ul class="vrow" style="padding-left:16px">` +
+      (c.source.inputs || []).map(i => `<li>${i}</li>`).join('') + `</ul>`;
+    const rc = c.source.recompute;
+    if (rc) {
+      html += `<div class="vrow"><b>${L ? '复算' : 'recompute'}</b>: <span class="mono">${rc.expr}</span> = <span id="vcalc" class="mono">?</span>
+        <span style="color:#7d8aa0">(${L ? '门禁期望' : 'gate expects'} ${rc.expect})</span></div>
+        <div class="vbtns"><button id="vdo">${L ? '在浏览器里复算' : 'Recompute in browser'}</button></div>`;
+    } else {
+      html += `<div class="vrow">${L ? '只有总量是公开的,逐块分配是本页的拆分;所以这里没有单一可复算值。' : 'Only the totals are published; the per-block split is ours, so there is no single value to recompute.'}</div>`;
+    }
+    if (c.source.note) html += `<div class="vrow" style="color:#7d8aa0">${c.source.note}</div>`;
+  } else {
+    html += `<div class="vrow"><b>${L ? '模型真实情况' : 'what is really there'}</b>: ${c.real_value}</div>
+      <div class="vrow"><b>${L ? '画面显示成' : 'what is drawn'}</b>: ${c.display_value}</div>
+      <div class="vrow" style="color:#7d8aa0">${c.source.note || ''}</div>`;
+  }
+  // live page-vs-receipt check
+  const [ok, why] = pageCheck(c);
+  html += `<div class="vsec"><div class="vrow"><b>${L ? '页面自检' : 'page self-check'}</b>:
+    <span class="${ok === true ? 'vok' : ok === false ? 'vbad' : ''}">${ok === true ? '✓ ' : ok === false ? '✗ ' : ''}${why}</span></div>`;
+  // baseline comparison for KV numbers
+  if (id.startsWith('kv.')) {
+    const n = 1048576;
+    html += `<div class="vrow"><b>${L ? '对比基线(1M 上下文)' : 'baseline at 1M context'}</b></div>
+      <div class="vrow">2017 ${L ? '朴素' : 'naive'}: <span class="mono">${fmtB(KV_NAIVE * n)}</span> &nbsp;·&nbsp;
+        V4.1 FP4: <span class="mono">${fmtB(KV_FP4 * n)}</span> &nbsp;·&nbsp;
+        ${L ? '差距' : 'ratio'} <span class="mono">${Math.round(KV_NAIVE / KV_FP4)}×</span></div></div>`;
+  } else {
+    html += '</div>';
+  }
+  html += `<div class="vbtns"><button class="ghost" id="vsrc">${L ? '打开报告来源' : 'Open the source'}</button></div>`;
+  body.innerHTML = html;
+  const doBtn = document.getElementById('vdo');
+  if (doBtn) doBtn.addEventListener('click', () => {
+    const got = evalExpr(R[id].source.recompute.expr);
+    const exp = R[id].source.recompute.expect;
+    const span = document.getElementById('vcalc');
+    span.textContent = got === null ? 'n/a' : got.toLocaleString();
+    span.style.color = got === exp ? '#7fe0b4' : '#ffb99a';
+  });
+  document.getElementById('vsrc').addEventListener('click', () => {
+    const url = R.__doc?.source?.url || 'https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash';
+    window.open(url, '_blank', 'noopener');
+  });
+  card.style.display = 'block';
+}
+(function initVcard() {
+  const close = () => { document.getElementById('vcard').style.display = 'none'; };
+  document.getElementById('vcard-x').addEventListener('click', close);
+  addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+})();
 function renderGlossary() {
   const body = document.getElementById('glo-body');
   body.innerHTML = '';

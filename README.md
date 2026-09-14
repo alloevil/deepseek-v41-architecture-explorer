@@ -123,7 +123,19 @@ Numbers the report does **not** publish are listed in `removed_claims` (θ=160,0
 extrapolation, which layers feed DSpark, LM-head precision, …) and must stay off the page.
 
 The panel shows the layers as chips (`report` / `derived` / `schematic`) for the topic you
-are reading, so a reader can tell an official spec from our arithmetic from a drawing choice:
+are reading, so a reader can tell an official spec from our arithmetic from a drawing choice.
+
+**Verify mode** — click any of those chips and you get the receipt itself:
+
+- `paper` → the section, the verbatim sentence, and where it is checked
+- `derived` → the formula, its inputs, and a **Recompute in browser** button that evaluates
+  the same expression the gate evaluates `(18 × 2 × 512 × 2 → 36,864)`
+- `schematic` → the real value next to the drawn value, plus why they differ
+- every card also runs a **live self-check**: the page fetches its own source and its receipt
+  and reports whether they still agree, and KV numbers get a **baseline comparison**
+  (2017 naive vs V4.1 FP4 at 1M context)
+- a chip marked `?` means the number has no receipt yet — the card says so instead of
+  pretending otherwise
 
 ```bash
 python3 verify.py          # human-readable
