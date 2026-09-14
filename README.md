@@ -142,8 +142,9 @@ Every number on the page is filed under one of three layers in
 | `derived` (5 claims) | our own arithmetic — 36 KB/token naive KV, the 1M-token conversions, ≈41×, the by-parameters bar weights | requires `formula` + `inputs`, **re-evaluates `recompute.expr`** and fails on mismatch, and requires the number to appear on the page |
 | `visualization` (4 claims) | drawing decisions — one grid standing for a layer's 384 experts, side-module placement, the CED plane | requires both `real_value` and `display_value` plus a note, and the page must carry the stated marker |
 
-Numbers the report does **not** publish are listed in `removed_claims` (θ=160,000, YaRN
-extrapolation, which layers feed DSpark, LM-head precision, …) and must stay off the page.
+Numbers the report does **not** publish are listed in `removed_claims` (the compressed KV's
+RoPE theta, YaRN-style extrapolation, which layers feed DSpark, LM-head precision, …) and
+must stay off the page.
 
 The panel shows the layers as chips (`report` / `derived` / `schematic`) for the topic you
 are reading, so a reader can tell an official spec from our arithmetic from a drawing choice.

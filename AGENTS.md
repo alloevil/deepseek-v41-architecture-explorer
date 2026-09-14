@@ -35,6 +35,7 @@
 |---|---|
 | 本地预览(no-store,避免浏览器缓存旧页) | `python3 serve.py 8741` → http://localhost:8741 |
 | 断言门禁(逐条核对页面 vs 报告原文) | `python3 verify.py`(加 `--json` 出机器可读) |
+| **推之前跑两个门禁(推荐)** | `VERIFY_CLAIMS_DIR=/tmp/verify-claims tools/preflight.sh` —— 先 `verify.py`,再 CI 用的 `verify_claims run`。少跑第二个会让 CI 变红 |
 | 重新核对报告原文 | `claims.json` 的 `source.how_to_recheck`(含 PDF 的 sha256) |
 | 机检 claim 的复算来源 | `docs/snapshots/deepseek-v41-tech-report-2026-09-14.md`(2026-09-14 抓取的报告原文摘录,头部含 URL 与 sha256) |
 | 左塔依据 | `claims.json` 的 `baseline_source`(arXiv 1706.03762) |

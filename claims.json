@@ -922,6 +922,17 @@
           "prefill 15 个 kernel"
         ],
         "must_not_contain": []
+      },
+      "repro": "python3 -c 'import re,pathlib;S=pathlib.Path(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\").read_text(\"utf-8\");H=pathlib.Path(\"index.html\").read_text(\"utf-8\");g=re.search(r\"only (\\d+) kernels during prefill and (\\d+) during decode\",S).groups();v=re.findall(r\"Reuse-mode layer = (\\d+) kernels prefill / (\\d+) decode\",H)+re.findall(r\"(\\d+) kernels in prefill, (\\d+) in decode\",H)+re.findall(r\"仅 (\\d+) 个 kernel、解码 (\\d+) 个\",H)+re.findall(r\"prefill (\\d+) 个 kernel、decode (\\d+) 个\",H);print(\"snapshot: %s/%s | viewer matches: %d | match: %s\"%(g[0],g[1],len(v),all(x==g for x in v) and len(v)>=3))'",
+      "evidence": "index.html (sparse-schedule fact line + per-layer cross-section note, zh and en) vs the committed report snapshot",
+      "as_of": "2026-09-14",
+      "check": {
+        "cmd": "python3 -c 'import re,pathlib;S=pathlib.Path(\"docs/snapshots/deepseek-v41-tech-report-2026-09-14.md\").read_text(\"utf-8\");H=pathlib.Path(\"index.html\").read_text(\"utf-8\");g=re.search(r\"only (\\d+) kernels during prefill and (\\d+) during decode\",S).groups();v=re.findall(r\"Reuse-mode layer = (\\d+) kernels prefill / (\\d+) decode\",H)+re.findall(r\"(\\d+) kernels in prefill, (\\d+) in decode\",H)+re.findall(r\"仅 (\\d+) 个 kernel、解码 (\\d+) 个\",H)+re.findall(r\"prefill (\\d+) 个 kernel、decode (\\d+) 个\",H);print(\"snapshot: %s/%s | viewer matches: %d | match: %s\"%(g[0],g[1],len(v),all(x==g for x in v) and len(v)>=3))'",
+        "expect": {
+          "contains": [
+            "match: True"
+          ]
+        }
       }
     }
   ],
