@@ -86,18 +86,34 @@ def check_derived():
 
 def check_visualization():
     """画面取舍:真实值与显示值都必须记录,且页面必须有说明文字。"""
+    return check_display_layer('visualization', DOC.get('visualization_claims', []))
+
+
+def check_display_layer(layer, claims):
+    """Measured/simulated/rendered layers: all declare their epistemic status."""
     results, failures = [], 0
-    for c in DOC.get("visualization_claims", []):
+    for c in claims:
         src = c.get("source", {})
         problems = []
-        if src.get("type") != "visualization":
-            problems.append(f"source.type must be 'visualization', got {src.get('type')!r}")
-        if not c.get("real_value"):
-            problems.append("real_value missing (what the model actually does)")
-        if not c.get("display_value"):
-            problems.append("display_value missing (what the viewer draws)")
+        if src.get("type") != layer:
+            problems.append(f"source.type must be {layer!r}, got {src.get('type')!r}")
+        if layer == 'visualization':
+            if not c.get("real_value"):
+                problems.append("real_value missing (what the model actually does)")
+            if not c.get("display_value"):
+                problems.append("display_value missing (what is drawn)")
+        elif layer == 'measured':
+            if not src.get('evidence'):
+                problems.append("evidence missing (where the measurement came from)")
+            if not c.get('display'):
+                problems.append("display missing (where the measurement appears)")
+        elif layer == 'simulated':
+            if not c.get("real_value"):
+                problems.append("real_value missing (what is and is not known)")
+            if not c.get("display_value"):
+                problems.append("display_value missing (what is simulated)")
         if not src.get("note"):
-            problems.append("note missing (why the two differ)")
+            problems.append("note missing (why this is not a paper fact)")
         pm = c.get("page_marker")
         if not pm:
             problems.append("page_marker missing")
@@ -105,7 +121,7 @@ def check_visualization():
             problems.append(f"page_marker not found on the page: {pm!r}")
         if problems:
             failures += 1
-        results.append({"id": c["id"], "layer": "visualization",
+        results.append({"id": c["id"], "layer": layer,
                         "level": "error" if problems else "ok",
                         "section": c.get("parameter", "?")[:60], "problems": problems})
     return results, failures
@@ -125,24 +141,33 @@ def check_absent():
 def check():
     res = []
     fails = 0
-    for fn in (check_paper, check_derived, check_visualization, check_absent):
+    for fn in (check_paper, check_derived, check_visualization):
         r, f = fn()
         res += r
         fails += f
+    for layer in ('measured', 'simulated'):
+        r, f = check_display_layer(layer, DOC.get(layer + '_claims', []))
+        res += r
+        fails += f
+    r, f = check_absent()
+    res += r
+    fails += f
     return res, fails
 
 
 def main():
     results, failures = check()
-    n_paper, n_derived, n_vis = (len(DOC["claims"]), len(DOC.get("derived_claims", [])),
-                                 len(DOC.get("visualization_claims", [])))
+    n_paper, n_derived, n_vis, n_measured, n_sim = (len(DOC["claims"]), len(DOC.get("derived_claims", [])),
+                                                     len(DOC.get("visualization_claims", [])),
+                                                     len(DOC.get("measured_claims", [])), len(DOC.get("simulated_claims", [])))
     if "--json" in sys.argv:
         print(json.dumps({
             "tool": "dsv41-verify",
             "target": str(ROOT),
             "source": DOC["source"]["url"],
             "source_sha256": DOC["source"]["sha256"],
-            "layers": {"paper": n_paper, "derived": n_derived, "visualization": n_vis},
+            "layers": {"paper": n_paper, "derived": n_derived, "visualization": n_vis,
+                       "measured": n_measured, "simulated": n_sim},
             "summary": {"ok": len(results) - failures, "error": failures},
             "results": results,
         }, ensure_ascii=False))
@@ -158,7 +183,9 @@ def main():
             layer_now = r["layer"]
             label = {"paper": "PAPER        (报告公布)",
                      "derived": "DERIVED      (我方推导,含公式)",
-                     "visualization": "VISUALIZATION(画面取舍,记录真实值)"}[layer_now]
+                     "visualization": "VISUALIZATION(画面取舍,记录真实值)",
+                     "measured": "MEASURED     (真实前向)",
+                     "simulated": "SIMULATED    (规范模拟,非权重)"}[layer_now]
             print(f"\n{label}")
         mark = "✓" if r["level"] == "ok" else "✗"
         print(f"  {mark} [{r['id']}] {r['section']}")
@@ -167,6 +194,7 @@ def main():
     ok = len(results) - failures
     print(f"\nverified: ok {ok} · error {failures} "
           f"(paper {n_paper} · derived {n_derived} · visualization {n_vis} · "
+          f"measured {n_measured} · simulated {n_sim} · "
           f"{len(DOC.get('removed_claims', []))} report-absence records)")
     return 1 if failures else 0
 
