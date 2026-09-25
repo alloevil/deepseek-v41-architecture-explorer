@@ -65,6 +65,23 @@
   }
   .lbtn.active { background: #3a4a6e; color: #fff; border-color: #5a6f9e; }
   #panel-title .t { font-size: 15px; font-weight: 600; color: #f0f3f9; margin-top: 2px; }
+  #experience { display: flex; gap: 4px; margin-top: 7px; }
+  #experience button, #view-nav button { font-size: 10px; padding: 3px 8px; border-radius: 4px; cursor: pointer;
+    background: transparent; color: #8d98ad; border: 1px solid #2c3548; }
+  #experience button.on, #view-nav button.on { background: rgba(47,143,208,0.2); color: #cfe4f8; border-color: #2f8fd0; }
+  #view-nav { display: flex; gap: 5px; padding: 7px 12px; border-bottom: 1px solid #1e2434; }
+  #view-nav button { flex: 1; }
+  body.beginner #pnav,
+  body.beginner #mode-row,
+  body.beginner #ctx-wrap,
+  body.beginner #glo-wrap,
+  body.beginner #moe-wrap,
+  body.beginner #diff-wrap,
+  body.beginner #lab-wrap,
+  body.beginner #prov-line,
+  body.beginner #view-nav { display: none !important; }
+  body.beginner #panel-cols { display: none !important; }
+  body.beginner #stat-bar { opacity: 0.8; }
   #stat-bar { display: flex; border-bottom: 1px solid #1e2434; }
   .stat { flex: 1; padding: 8px 2px 7px; text-align: center; border-right: 1px solid #1e2434; }
   .stat:last-child { border-right: none; }
@@ -408,6 +425,10 @@
     <div id="plain-line"></div>
     <div id="prov-line"></div>
     <div id="pdetail"></div>
+    <div id="experience">
+      <button data-exp="beginner" data-zh="入门" data-en="Beginner">入门</button>
+      <button data-exp="engineer" data-zh="工程" data-en="Engineer">工程</button>
+    </div>
   </div>
   <div id="stat-bar">
     <div class="stat"><b>552B</b><span data-zh="总参" data-en="total">总参</span></div>
@@ -425,6 +446,12 @@
     <button class="pbtn active" data-phase="decode">Decode</button>
     <button class="pbtn" data-phase="prefill">Prefill</button>
     <span id="mode-note">高度 = 层(均匀)</span>
+  </div>
+  <div id="view-nav">
+    <button data-nav="learn" data-zh="学习" data-en="Learn">学习</button>
+    <button data-nav="explore" data-zh="探索" data-en="Explore">探索</button>
+    <button data-nav="verify" data-zh="验证" data-en="Verify">验证</button>
+    <button data-nav="experiment" data-zh="实验" data-en="Experiment">实验</button>
   </div>
   <div id="ctx-wrap">
     <div id="ctx-head"><span data-zh="KV 成本计算器(4K → 1M)" data-en="KV cost calculator (4K → 1M)">KV 成本计算器(4K → 1M)</span><i id="ctx-caret">▾</i></div>
@@ -2473,6 +2500,25 @@ function stopLearn() {
     else stopLearn();
   });
 })();
+/* Experience modes: beginner hides engineering density; engineer exposes all tools. */
+let experience = 'engineer';
+function setExperience(x) {
+  experience = x;
+  document.body.classList.toggle('beginner', x === 'beginner');
+  document.querySelectorAll('[data-exp]').forEach(b => b.classList.toggle('on', b.dataset.exp === x));
+  document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on',
+    (x === 'beginner' && b.dataset.nav === 'learn') || (x === 'engineer' && b.dataset.nav === 'explore')));
+  if (x === 'beginner') startLearn(); else stopLearn();
+  try { localStorage.setItem('dsv41-experience', x); } catch {}
+}
+document.querySelectorAll('[data-exp]').forEach(b => b.addEventListener('click', () => setExperience(b.dataset.exp)));
+document.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => {
+  const n = b.dataset.nav;
+  if (n === 'learn') setExperience('beginner');
+  else if (n === 'explore') setExperience('engineer');
+  else if (n === 'verify') { setExperience('engineer'); document.getElementById('diff-wrap').classList.remove('collapsed'); renderDiff(); }
+  else if (n === 'experiment') { setExperience('engineer'); document.getElementById('lab-wrap').classList.remove('collapsed'); renderLab(); }
+}));
 
 /* ============================================================
    Architectural diff — same aspect, two generations, and the why
@@ -2572,6 +2618,20 @@ function labMetrics(s) {
   };
 }
 const LAB_REF_M = labMetrics(LAB_REF);
+const LAB_PRESETS = [
+  { key: 'real', zh: 'V4.1 真实配置', en: 'V4.1 actual', state: { experts: 384, topK: 6, swa: 128, gTopK: 512, bits: 4, ctx: 1048576 } },
+  { key: 'lowmem', zh: '低显存', en: 'low memory', state: { experts: 128, topK: 4, swa: 64, gTopK: 256, bits: 4, ctx: 1048576 } },
+  { key: 'lowlat', zh: '低延迟', en: 'low latency', state: { experts: 384, topK: 4, swa: 64, gTopK: 256, bits: 4, ctx: 65536 } },
+  { key: 'capacity', zh: '高容量', en: 'high capacity', state: { experts: 384, topK: 8, swa: 128, gTopK: 512, bits: 8, ctx: 1048576 } },
+];
+
+function setLabPreset(key) {
+  const p = LAB_PRESETS.find(x => x.key === key);
+  if (!p) return;
+  Object.assign(LABS, p.state);
+  if (document.getElementById('lab-body')) renderLab();
+}
+
 function renderLab() {
   const body = document.getElementById('lab-body');
   const L = lang === 'zh';
@@ -2579,56 +2639,29 @@ function renderLab() {
     <div class="lknob"><label>${label}</label>
       <input type="range" id="lk-${id}" min="${min}" max="${max}" step="${step}" value="${val}">
       <span class="kv" id="lv-${id}">${val}${unit || ''}</span></div>`;
-  body.innerHTML =
+  const presets = `<div class="lknob seg"><label>${L ? '预设场景' : 'presets'}</label><span class="segbtns">${LAB_PRESETS.map(p =>
+    `<button data-preset="${p.key}">${L ? p.zh : p.en}</button>`).join('')}</span></div>`;
+  body.innerHTML = presets +
     knob('experts', L ? '路由专家数' : 'routed experts', 64, 384, 64, LABS.experts) +
     knob('topK', L ? '每词激活(个)' : 'active per token', 2, 8, 1, LABS.topK) +
     knob('swa', L ? 'SWA 窗口' : 'SWA window', 64, 512, 64, LABS.swa) +
     knob('gTopK', L ? '全局 Top-K' : 'global Top-K', 128, 1024, 128, LABS.gTopK) +
     `<div class="lknob seg"><label>${L ? 'KV 精度' : 'KV precision'}</label>
-      <span class="segbtns"><button data-bits="4">FP4</button><button data-bits="8">FP8</button></div>
-      <span></span></div>` +
-    knob('ctx', L ? '上下文' : 'context', 0, 1000, 10, 1000) +
-    `<div id="lab-bars">
-      ${['kvBytes', 'swaCache', 'attnRead', 'moeFlops', 'comm', 'capacity'].map(k => `
-        <div class="lbar" data-k="${k}">
-          <span class="lb"></span>
-          <span class="track"><i></i><span class="ref"></span></span>
-          <span class="num"></span>
-        </div>`).join('')}
-    </div>
-    <div id="lab-quality"></div>
-    <div id="lab-note"></div>
-    <button id="lab-reset">${L ? '恢复 V4.1 真实配置' : 'Reset to the real V4.1 config'}</button>
-    <div style="margin-top:8px"><span class="prov derived clickable" data-claim="cost.lab_model">${L ? '模型来源' : 'model source'}</span></div>`;
-  const label = {
-    kvBytes: L ? 'KV 存储 @ 上下文' : 'KV storage @ context',
-    swaCache: L ? 'SWA 常数缓存' : 'SWA bounded cache',
-    attnRead: L ? '注意力读取 / query' : 'attention read / query',
-    moeFlops: L ? 'MoE 计算' : 'MoE compute',
-    comm: L ? '通信(all-to-all)' : 'communication (all-to-all)',
-    capacity: L ? '容量(专家总数)' : 'capacity (total experts)',
-  };
-  ['experts', 'topK', 'swa', 'gTopK', 'ctx'].forEach(id => {
-    const el = document.getElementById('lk-' + id);
-    el.addEventListener('input', () => {
-      if (id === 'ctx') LABS.ctx = Math.round(4096 * Math.pow(256, el.value / 1000));
-      else LABS[id] = +el.value;
-      updateLab();
-    });
-  });
-  body.querySelectorAll('[data-bits]').forEach(b => b.addEventListener('click', () => {
-    LABS.bits = +b.dataset.bits; updateLab();
+      <span class="segbtns"><button data-bits="4">FP4</button><button data-bits="8">FP8</button></span><span></span></div>` +
+    knob('ctx', L ? '上下文' : 'context', 0, 1000, 10, Math.round(Math.log2(LABS.ctx / 4096) / 8 * 1000)) +
+    `<div id="lab-bars">${['kvBytes', 'swaCache', 'attnRead', 'moeFlops', 'comm', 'capacity'].map(k => `
+        <div class="lbar" data-k="${k}"><span class="lb"></span><span class="track"><i></i><span class="ref"></span></span><span class="num"></span></div>`).join('')}</div>` +
+    `<div id="lab-quality"></div><div id="lab-note"></div>
+     <button id="lab-reset">${L ? '恢复 V4.1 真实配置' : 'Reset to the real V4.1 config'}</button>
+     <div style="margin-top:8px"><span class="prov derived clickable" data-claim="cost.lab_model">${L ? '模型来源' : 'model source'}</span></div>`;
+  body.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => setLabPreset(b.dataset.preset)));
+  body.querySelectorAll('[data-bits]').forEach(b => b.addEventListener('click', () => { LABS.bits = +b.dataset.bits; updateLab(); }));
+  ['experts', 'topK', 'swa', 'gTopK', 'ctx'].forEach(id => document.getElementById('lk-' + id).addEventListener('input', e => {
+    if (id === 'ctx') LABS.ctx = Math.round(4096 * Math.pow(256, e.target.value / 1000)); else LABS[id] = +e.target.value; updateLab();
   }));
-  document.getElementById('lab-reset').addEventListener('click', () => {
-    Object.assign(LABS, LAB_REF);
-    const set = (id, v) => { const el = document.getElementById('lk-' + id); if (el) el.value = v; };
-    set('experts', LABS.experts); set('topK', LABS.topK); set('swa', LABS.swa);
-    set('gTopK', LABS.gTopK); set('ctx', 1000);
-    updateLab();
-  });
-  body.querySelectorAll('.prov.clickable').forEach(sp =>
-    sp.addEventListener('click', () => openVerify(sp.dataset.claim)));
-  body.querySelectorAll('.lbar').forEach(b => { b.querySelector('.lb').textContent = label[b.dataset.k]; });
+  document.getElementById('lab-reset').addEventListener('click', () => setLabPreset('real'));
+  body.querySelectorAll('.prov.clickable').forEach(sp => sp.addEventListener('click', () => openVerify(sp.dataset.claim)));
+  body.querySelectorAll('.lbar').forEach(b => { b.querySelector('.lb').textContent = ({ kvBytes: L ? 'KV 存储 @ 上下文' : 'KV @ context', swaCache: L ? 'SWA 常数缓存' : 'SWA bounded cache', attnRead: L ? '注意力读取 / query' : 'attention read / query', moeFlops: L ? 'MoE 计算' : 'MoE compute', comm: L ? '通信(all-to-all)' : 'communication (all-to-all)', capacity: L ? '容量(专家总数)' : 'capacity (experts)' })[b.dataset.k]; });
   updateLab();
 }
 function updateLab() {
@@ -2957,8 +2990,10 @@ function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify({ la
     el.innerHTML = lang === 'zh' ? el.dataset.zh : el.dataset.en;
   });
   if (prefs.quality === 'low') { quality = 'low'; renderer.shadowMap.enabled = false; key.castShadow = false; }
+  const exp = prefs.experience || 'engineer';
   setQualityBtn();
   buildLegend();
+  setQualityBtn();
   buildChips();
   updateModeNote();
   fillOverview();
@@ -2968,6 +3003,7 @@ function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify({ la
   if (m === 'params' || m === 'active') setMode(m);
   const c = p.get('c');
   if (c && CONCEPTS[c]) selectConcept(c);
+  setExperience(exp);
 })();
 
 // debug hook for verification
