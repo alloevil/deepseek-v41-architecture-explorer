@@ -588,6 +588,10 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from './OrbitControls.js';
+import { PROVENANCE_TYPES, SOURCE_LABELS, REAL_MODEL_LIMIT } from './src/model/provenance.js';
+import { LAB_REF as SHARED_LAB_REF, labMetrics as sharedLabMetrics } from './src/simulation/cost-model.js';
+import { TRACE_FIELDS, TRACE_LIMITATION } from './src/simulation/trace-contract.js';
+import { MOE_GRID, REAL_V41 } from './src/visualization/scene-contract.js';
 import { RoundedBoxGeometry } from './RoundedBoxGeometry.js';
 import { EffectComposer } from './postprocessing/EffectComposer.js';
 import { RenderPass } from './postprocessing/RenderPass.js';
@@ -1245,7 +1249,7 @@ const kvRail = makeRail({ x: RX + 3.6, z: -2.15, w: 1.0, color: COLORS.kv, opaci
 makeLabel('FP4 KV · 890 B/tok', { follow: rhead, off: new THREE.Vector3(3.4, 0.7, 0), size: 0.9, align: 'left', concept: 'kvcache', side: 'right' });
 
 /* ---------- MoE expert field (384 routed + 1 shared) ---------- */
-const MOE_COLS = 24, MOE_ROWS = 16, CELL = 0.26, STEP = 0.34;
+const MOE_COLS = MOE_GRID.columns, MOE_ROWS = MOE_GRID.rows, CELL = 0.26, STEP = 0.34;
 const MOE_X0 = RX - 2.2, MOE_Z0 = 5.2;
 const ACTIVE = new Set([17, 58, 121, 199, 264, 341]);
 const CELL_ACTIVE = 0x51e6a8, CELL_DIM = 0x16323f;
@@ -1928,7 +1932,6 @@ function simTrace(mesh, pos) {
   const sum = raw.reduce((a, b) => a + b, 0);
   return {
     k, no, m, visible, kvHead, idxHead,
-    globalRead: k === 'swa' ? 0 : Math.min(512, visible),
     windowRead: 128,
     newKV: k === 'full' ? (m > 1 ? '1 / ' + m + ' tokens' : '1 / token') : '0',
     reuseKV: k === 'full' ? '—' : `L${kvHead} 的缓存`,
@@ -1960,7 +1963,7 @@ function traceHTML(mesh, pos) {
   rows += `<div class="trow"><span class="tk">mHC</span><span class="tv">${L ? '4 条流系数' : '4 stream weights'}
       <div class="tmhc">${t.mhc.map((w, i) => `<span><i style="width:${Math.round(w * 44)}px"></i>${w}</span>`).join('')}</div>${tg('sim')}</span></div>`;
   return `<div class="tsec">${rows}
-    <span class="tlink" id="walk-realmoe">${L ? '专家选择是模拟的(报告未公布路由权重)→ 看真实前向测出的路由' : 'expert picks are simulated (router weights unpublished) → see measured routing from a real forward pass'}</span></div>`;
+    <span class="tlink" id="walk-realmoe">${L ? '专家选择是模拟的(报告未公布路由权重)→ 看真实前向测出的路由' : 'expert picks are simulated (router weights unpublished) → see measured routing from a real forward pass'}<br><small>${TRACE_LIMITATION}</small></span></div>`;
 }
 function walkStep() {
   if (walkIdx >= WALK_STEPS.length) { stopWalk(); return; }
@@ -2106,6 +2109,9 @@ const GLOSSARY = [
   ['RoPE 位置编码', '用旋转的方式编码位置,现代模型的主流做法', 'encodes position by rotation — the modern default', 'posenc'],
   ['1M 上下文', '一次能读进约 100 万个词 ≈ 三本书', 'about a million tokens in one go ≈ three novels', 'kvcache'],
 ];
+function sourceLabel(layer) {
+  return Object.values(PROVENANCE_TYPES).includes(layer) ? (SOURCE_LABELS[layer]?.[lang] || layer) : layer;
+}
 
 function renderPlain(concept) {
   const el = document.getElementById('plain-line');
@@ -2138,7 +2144,7 @@ function renderProv(concept) {
   const L = lang === 'zh';
   el.innerHTML = `<span class="lbl">${L ? '数字来源(点开验证)' : 'sources (click to verify)'}</span>` +
     rows.map(([layer, text, id]) =>
-      `<span class="prov ${layer} clickable" data-claim="${id ?? ''}">${text}${id ? '' : ' ?'}</span>`).join('') +
+      `<span class="prov ${layer} clickable" data-claim="${id ?? ''}">${sourceLabel(layer)}:${text}${id ? '' : ' ?'}</span>`).join('') +
     `<div id="prov-legend">${L
       ? '<span class="prov paper">报告</span>正式报告写的 · <span class="prov derived">推导</span>本页按公式算的 · <span class="prov vis">示意</span>为了画面做的取舍 · <b>?</b> 尚未登记'
       : '<span class="prov paper">paper</span> published · <span class="prov derived">derived</span> our arithmetic · <span class="prov vis">schematic</span> a drawing choice · <b>?</b> not registered yet'}</div>`;
@@ -2599,23 +2605,14 @@ function renderDiff() {
 }
 
 /* ============================================================
-   Cost lab — a *simplified* cost model over the published config.
-   Anchored on the report's own 890 B/token at the real configuration.
-   Everything here is an estimate; quality is explicitly unknown.
+   Cost lab — shared simulation module backs the UI.
    ============================================================ */
-const LAB_REF = { experts: 384, topK: 6, swa: 128, gTopK: 512, bits: 4, ctx: 1048576 };
+const LAB_REF = { ...SHARED_LAB_REF };
 const LABS = { ...LAB_REF };
 function labMetrics(s) {
-  const prec = s.bits / 4;                 // FP4 = 1, FP8 = 2
-  const kvPerToken = KV_FP4 * prec;        // B/token (KV_FP4 = 890, the reported figure at FP4)
-  return {
-    kvBytes: kvPerToken * s.ctx,           // global KV at this context length
-    swaCache: s.swa * prec,                // bounded SWA cache (relative)
-    attnRead: s.gTopK * prec + s.swa * prec * 0.1, // read volume per query (relative)
-    moeFlops: s.topK,                      // active experts drive MoE compute
-    comm: s.topK,                          // expert-parallel all-to-all tracks active experts
-    capacity: s.experts,                   // total routed experts (capability, not a cost)
-  };
+  const x = sharedLabMetrics(s);
+  return { kvBytes: x.kvBytes, swaCache: x.swaCache, attnRead: x.attentionRead,
+    moeFlops: x.moeCompute, comm: x.communication, capacity: x.capacity };
 }
 const LAB_REF_M = labMetrics(LAB_REF);
 const LAB_PRESETS = [

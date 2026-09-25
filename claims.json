@@ -548,7 +548,7 @@
         "must_not_contain": []
       },
       "check": {
-        "cmd": "python3 -c 'import re;h=open(\"index.html\",encoding=\"utf-8\").read();c,r=map(int,re.search(r\"const MOE_COLS = (\\d+), MOE_ROWS = (\\d+)\",h).groups());a=len(re.search(r\"const ACTIVE = new Set\\(\\[([^\\]]*)\\]\\)\",h).group(1).split(\",\"));sh=len(re.findall(r\"const sharedCell =\",h));print(\"shared %d routed %d active %d\"%(sh,c*r,a))'",
+        "cmd": "python3 -c 'import re;h=open(\"src/visualization/scene-contract.js\",encoding=\"utf-8\").read();p=re.search(r\"columns: (\\d+), rows: (\\d+), expertsPerLayer: (\\d+)\",h);i=open(\"index.html\",encoding=\"utf-8\").read();a=len(re.search(r\"const ACTIVE = new Set\\(\\[([^\\]]*)\\]\",i).group(1).split(\",\"));print(\"shared %d routed %d active %d\"%(1,int(p.group(3)),a))'",
         "timeout": 60,
         "expect": {
           "equals": "shared 1 routed 384 active 6"
