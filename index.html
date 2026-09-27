@@ -82,6 +82,26 @@
   #chapter-card b { color: #e8ecf4; }
   #chapter-card small { display: block; margin-top: 4px; color: #69768d; }
   .chapter-walk { margin: 0 12px 8px; width: calc(100% - 24px); padding: 5px; border: 1px solid #2c3548; border-radius: 4px; background: rgba(79,124,255,0.12); color: #a8c8ff; font-size: 10px; cursor: pointer; }
+  .tools-toggle { margin-top: 7px; width: 100%; padding: 5px 8px; border-radius: 5px; cursor: pointer; font-size: 10px; background: rgba(30,38,54,0.55); color: #9aa6bb; border: 1px solid #2c3548; }
+  .tools-toggle:hover { color: #e8ecf4; border-color: #5a6f9e; }
+  body.guided #experience,
+  body.guided #stat-bar,
+  body.guided #pnav,
+  body.guided #mode-row,
+  body.guided #view-nav,
+  body.guided #layer-focus,
+  body.guided #ctx-wrap,
+  body.guided #glo-wrap,
+  body.guided #moe-wrap,
+  body.guided #diff-wrap,
+  body.guided #lab-wrap,
+  body.guided #panel-cols,
+  body.guided #prov-line,
+  body.guided #pdetail { display: none !important; }
+  body.guided #panel { max-height: calc(100vh - 96px); }
+  body.guided #chapter-nav { padding-top: 9px; }
+  body.guided #chapter-card { font-size: 11.5px; line-height: 1.65; padding: 11px; }
+  body.guided .chapter-walk { padding: 8px; font-size: 11px; background: rgba(79,124,255,0.2); border-color: #456ba8; }
   body.beginner #chapter-nav,
   body.beginner #chapter-card,
   body.beginner #chapter-walk { display: none; }
@@ -454,6 +474,7 @@
       <button data-exp="beginner" data-zh="入门" data-en="Beginner">入门</button>
       <button data-exp="engineer" data-zh="工程" data-en="Engineer">工程</button>
     </div>
+    <button id="tools-toggle" class="tools-toggle" type="button" data-zh="更多工具" data-en="More tools">更多工具</button>
   <div id="compare-callouts">
     <span class="cc dense" data-zh="2017：全量注意力 + 每层 KV" data-en="2017: dense attention + per-layer KV">2017：全量注意力 + 每层 KV</span>
     <span class="cc sparse" data-zh="V4.1：SWA + CSA2 稀疏读取 + 跨层复用" data-en="V4.1: SWA + CSA2 sparse reads + cross-layer reuse">V4.1：SWA + CSA2 稀疏读取 + 跨层复用</span>
@@ -1997,8 +2018,6 @@ function traceHTML(mesh, pos) {
   const t = simTrace(mesh, pos);
   const TAG = { spec: ['规范', 'spec'], der: ['推导', 'derived'], sim: ['模拟', 'sim'] };
   const tg = k => `<span class="ttag ${k}">${L ? TAG[k][0] : TAG[k][1]}</span>`;
-  const modeName = { swa: 'SWA', full: `CSA2 Full (m=${t.m})`, reindex: 'CSA2 Reindex (m=1)', reuse: 'CSA2 Reuse (m=1)' }[t.k];
-  let rows = '';
   rows += `<div class="trow"><span class="tk">${L ? '调度' : 'schedule'}</span><span class="tv"><span class="num">${modeName}</span>${tg('spec')}</span></div>`;
   if (t.k === 'swa') {
     rows += `<div class="trow"><span class="tk">${L ? '读取' : 'reads'}</span><span class="tv">${L ? '仅窗口内' : 'window only'} <span class="num">${t.windowRead}</span> ${L ? '个位置' : 'positions'}${tg('spec')}</span></div>`;
@@ -2605,6 +2624,25 @@ function setChapter(next) {
   else if (next === 'moe') selectConcept('ffn');
   else { selectedConcept = null; hoverConcept = null; setHighlight(); fillOverview(); buildChips(); }
 }
+function playChapter() {
+  stopTour();
+  if (chapter === 'overview') { startWalk(); return; }
+  const wanted = chapter === 'attention' ? new Set(['attention', 'sparse']) : chapter === 'kvcache' ? new Set(['kvcache', 'memory']) : new Set(['ffn']);
+  const saved = WALK_STEPS;
+  walkIdx = 0;
+  walkTargets = null;
+  const original = window.__chapterSteps;
+  window.__chapterSteps = saved.filter(s => s.targets.some(m => wanted.has(m.userData.concept)));
+  if (!window.__chapterSteps.length) { startWalk(); return; }
+  const run = () => {
+    if (walkIdx >= window.__chapterSteps.length) { stopWalk(); window.__chapterSteps = original; return; }
+    const s = window.__chapterSteps[walkIdx++];
+    walkTargets = new Set(s.targets); setHighlight(); startFlow(null, s.targets[0]);
+    const cap = document.getElementById('walk-cap'); cap.style.display = 'block';
+    cap.innerHTML = `<b>${walkIdx}/${window.__chapterSteps.length}</b>${lang === 'zh' ? s.zh : s.en}<span class="wstop">${lang === 'zh' ? 'Esc 停止' : 'Esc to stop'}</span>`;
+  };
+  run(); walkTimer = setInterval(run, 1500); setWalkBtn(true);
+}
 document.querySelectorAll('[data-chapter]').forEach(b => b.addEventListener('click', () => setChapter(b.dataset.chapter)));
 document.querySelectorAll('[data-exp]').forEach(b => b.addEventListener('click', () => setExperience(b.dataset.exp)));
 document.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => {
@@ -2805,7 +2843,14 @@ function buildChips() {
 }
 setChapter('overview');
 const chapterWalk = document.getElementById('chapter-walk');
-chapterWalk.addEventListener('click', () => { stopTour(); walkTimer ? stopWalk() : startWalk(); });
+chapterWalk.addEventListener('click', playChapter);
+const toolsToggle = document.getElementById('tools-toggle');
+document.body.classList.add('guided');
+toolsToggle.addEventListener('click', () => {
+  const guided = document.body.classList.toggle('guided');
+  toolsToggle.textContent = guided ? (lang === 'zh' ? '更多工具' : 'More tools') : (lang === 'zh' ? '收起工具' : 'Hide tools');
+  toolsToggle.setAttribute('aria-expanded', String(!guided));
+});
 function setLang(l) {
   lang = l;
   document.querySelectorAll('.lbtn').forEach(b => b.classList.toggle('active', b.dataset.lang === l));
