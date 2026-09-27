@@ -39,8 +39,8 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #07090f; font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; }
   #canvas-wrap {
-    position: fixed; top: 0; left: 0; bottom: 0; right: 486px;
-    background: radial-gradient(130% 100% at 50% -10%, #131c30 0%, #0a0f1c 48%, #06080e 100%);
+    position: fixed; top: 0; left: 0; bottom: 0; right: 426px;
+    background: radial-gradient(130% 100% at 50% -10%, #10182a 0%, #080d18 48%, #05070c 100%);
     transition: right 0.22s ease;
   }
   body.canvas-only #canvas-wrap { right: 0; }
@@ -54,7 +54,7 @@
   #header h1 .dim { color: #7a8699; font-weight: 400; }
   #header p { font-size: 12px; color: #677185; margin-top: 3px; }
   #panel {
-    position: fixed; top: 64px; right: 16px; width: 460px; max-height: calc(100vh - 130px);
+    position: fixed; top: 64px; right: 16px; width: 400px; max-height: calc(100vh - 130px);
     background: rgba(13,17,26,0.94); border: 1px solid #232a3a; border-radius: 10px;
     z-index: 20; display: flex; flex-direction: column; overflow: hidden;
     box-shadow: 0 8px 32px rgba(0,0,0,0.55); backdrop-filter: blur(6px);
@@ -956,9 +956,9 @@ const rim = new THREE.PointLight(0xa060ff, 1.6, 140); rim.position.set(6, 26, -3
 const rim2 = new THREE.DirectionalLight(0x3f6cff, 0.9); rim2.position.set(-24, 18, -34); scene.add(rim2);
 const rim3 = new THREE.DirectionalLight(0x18b8c8, 0.45); rim3.position.set(30, 6, -20); scene.add(rim3);
 
-const grid = new THREE.GridHelper(160, 80, 0x1c2436, 0x121826);
-grid.position.y = -0.02;
-scene.add(grid);
+const grid = new THREE.GridHelper(160, 40, 0x161e2d, 0x0d1420);
+grid.material.opacity = 0.28;
+grid.material.transparent = true;
 const shadowGround = new THREE.Mesh(new THREE.PlaneGeometry(220, 220),
   new THREE.ShadowMaterial({ opacity: 0.4 }));
 shadowGround.rotation.x = -Math.PI / 2;
@@ -1248,6 +1248,8 @@ const rhead = rightBlock({ w: 6, h: 0.7, d: 4, color: COLORS.out, concept: 'outp
   label: 'LM Head + confidence-scheduled verify', tip: 'DSpark verification length chosen dynamically from profiled throughput curves', pW: 1.5, aW: 1.5 });
 makeLabel('LM Head', { follow: rhead, off: new THREE.Vector3(0, 1.35, 2.0), size: 1.2, concept: 'output', side: 'right' });
 const rightTitle = makeLabel('DeepSeek-V4.1-Flash · 2026', { follow: rhead, off: new THREE.Vector3(0, 3.15, 0), size: 2.2, sub: '40 layers (CED) · 552B · 8B/16B active' });
+const encBoundaryLabel = makeLabel('ENCODER 20', { follow: ced, off: new THREE.Vector3(-4.2, 0.15, 1.8), size: 0.85, align: 'right', concept: 'kvcache', side: 'right' });
+const decBoundaryLabel = makeLabel('DECODER 20', { follow: rhead, off: new THREE.Vector3(-4.2, 0.15, 1.8), size: 0.85, align: 'right', concept: 'output', side: 'right' });
 
 // DSpark ×3 floats beside/above the head on the label-free left side (does not consume tower flow height)
 let dLast = null, dFirst = null;
