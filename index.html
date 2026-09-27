@@ -82,6 +82,9 @@
   #chapter-card b { color: #e8ecf4; }
   #chapter-card small { display: block; margin-top: 4px; color: #69768d; }
   .chapter-walk { margin: 0 12px 8px; width: calc(100% - 24px); padding: 5px; border: 1px solid #2c3548; border-radius: 4px; background: rgba(79,124,255,0.12); color: #a8c8ff; font-size: 10px; cursor: pointer; }
+  body.beginner #chapter-nav,
+  body.beginner #chapter-card,
+  body.beginner #chapter-walk { display: none; }
   #experience { display: flex; gap: 4px; margin-top: 7px; }
   #experience button, #view-nav button { font-size: 10px; padding: 3px 8px; border-radius: 4px; cursor: pointer;
     background: transparent; color: #8d98ad; border: 1px solid #2c3548; }
@@ -483,6 +486,7 @@
     <button data-focus="all" data-zh="全塔" data-en="All">全塔</button>
     <button data-focus="encoder" data-zh="Encoder 20" data-en="Encoder 20">Encoder 20</button>
     <button data-focus="decoder" data-zh="Decoder 20" data-en="Decoder 20">Decoder 20</button>
+  </div>
   <div id="chapter-nav" role="tablist" aria-label="Architecture chapters">
     <button class="chapter active" data-chapter="overview" data-zh="总览" data-en="Overview">总览</button>
     <button class="chapter" data-chapter="attention" data-zh="注意力" data-en="Attention">注意力</button>
@@ -491,8 +495,7 @@
   </div>
   <div id="chapter-card" aria-live="polite"></div>
   <button id="chapter-walk" class="chapter-walk" type="button" data-zh="▶ 跟随 token" data-en="▶ Follow token">▶ 跟随 token</button>
-  </div>
-  <div id="ctx-wrap">
+  <div id="ctx-wrap" class="collapsed">
     <div id="ctx-head"><span data-zh="KV 成本计算器(4K → 1M)" data-en="KV cost calculator (4K → 1M)">KV 成本计算器(4K → 1M)</span><i id="ctx-caret">▾</i></div>
     <div id="ctx-body">
       <div id="ctx-row">
