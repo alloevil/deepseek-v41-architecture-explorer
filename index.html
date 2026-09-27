@@ -71,6 +71,10 @@
   .panel-toggle { float: right; margin-top: 4px; font-size: 9px; padding: 3px 7px; border-radius: 4px; cursor: pointer;
     background: transparent; color: #8d98ad; border: 1px solid #2c3548; }
   .panel-toggle:hover { color: #e8ecf4; border-color: #5a6f9e; }
+  #compare-callouts { display: flex; gap: 5px; padding: 6px 12px; border-bottom: 1px solid #1e2434; }
+  #compare-callouts .cc { flex: 1; padding: 5px 6px; border-radius: 4px; font-size: 9px; line-height: 1.35; }
+  #compare-callouts .dense { color: #b7c9ff; background: rgba(79,124,255,0.12); border-left: 2px solid #4f7cff; }
+  #compare-callouts .sparse { color: #ffd3a6; background: rgba(255,141,92,0.12); border-left: 2px solid #ff8d5c; }
   #experience { display: flex; gap: 4px; margin-top: 7px; }
   #experience button, #view-nav button { font-size: 10px; padding: 3px 8px; border-radius: 4px; cursor: pointer;
     background: transparent; color: #8d98ad; border: 1px solid #2c3548; }
@@ -440,6 +444,10 @@
       <button data-exp="beginner" data-zh="入门" data-en="Beginner">入门</button>
       <button data-exp="engineer" data-zh="工程" data-en="Engineer">工程</button>
     </div>
+  <div id="compare-callouts">
+    <span class="cc dense" data-zh="2017：全量注意力 + 每层 KV" data-en="2017: dense attention + per-layer KV">2017：全量注意力 + 每层 KV</span>
+    <span class="cc sparse" data-zh="V4.1：SWA + CSA2 稀疏读取 + 跨层复用" data-en="V4.1: SWA + CSA2 sparse reads + cross-layer reuse">V4.1：SWA + CSA2 稀疏读取 + 跨层复用</span>
+  </div>
   </div>
   <div id="stat-bar">
     <div class="stat"><b>552B</b><span data-zh="总参" data-en="total">总参</span></div>
@@ -896,8 +904,8 @@ scene.background = (() => { // gradient backdrop (bloom-safe: composer needs opa
 scene.fog = new THREE.Fog(0x0a0f1c, 75, 170);
 
 const camera = new THREE.PerspectiveCamera(45, wrap.clientWidth / wrap.clientHeight, 0.1, 400);
-const HOME_POS = new THREE.Vector3(0, 13, 60);
-const HOME_TGT = new THREE.Vector3(0, 9, 0);
+const HOME_POS = new THREE.Vector3(0, 15, 52);
+const HOME_TGT = new THREE.Vector3(0, 10, 0);
 const SIDE_POS = new THREE.Vector3(61, 14, 0);
 camera.position.copy(HOME_POS);
 
