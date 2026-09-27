@@ -41,7 +41,10 @@
   #canvas-wrap {
     position: fixed; top: 0; left: 0; bottom: 0; right: 486px;
     background: radial-gradient(130% 100% at 50% -10%, #131c30 0%, #0a0f1c 48%, #06080e 100%);
+    transition: right 0.22s ease;
   }
+  body.canvas-only #canvas-wrap { right: 0; }
+  body.canvas-only #panel { display: none; }
   #header {
     position: fixed; top: 0; left: 0; right: 0; padding: 14px 22px; z-index: 10;
     background: linear-gradient(to bottom, rgba(7,9,15,0.92), rgba(7,9,15,0));
@@ -65,6 +68,9 @@
   }
   .lbtn.active { background: #3a4a6e; color: #fff; border-color: #5a6f9e; }
   #panel-title .t { font-size: 15px; font-weight: 600; color: #f0f3f9; margin-top: 2px; }
+  .panel-toggle { float: right; margin-top: 4px; font-size: 9px; padding: 3px 7px; border-radius: 4px; cursor: pointer;
+    background: transparent; color: #8d98ad; border: 1px solid #2c3548; }
+  .panel-toggle:hover { color: #e8ecf4; border-color: #5a6f9e; }
   #experience { display: flex; gap: 4px; margin-top: 7px; }
   #experience button, #view-nav button { font-size: 10px; padding: 3px 8px; border-radius: 4px; cursor: pointer;
     background: transparent; color: #8d98ad; border: 1px solid #2c3548; }
@@ -82,6 +88,10 @@
   body.beginner #view-nav { display: none !important; }
   body.beginner #panel-cols { display: none !important; }
   body.beginner #stat-bar { opacity: 0.8; }
+  #layer-focus { display: flex; gap: 4px; padding: 5px 12px; border-bottom: 1px solid #1e2434; }
+  #layer-focus button { flex: 1; font-size: 10px; padding: 3px 6px; border-radius: 4px; cursor: pointer;
+    background: transparent; color: #8d98ad; border: 1px solid #2c3548; }
+  #layer-focus button.on { background: rgba(154,107,255,0.18); border-color: #7560b8; color: #d7caff; }
   #stat-bar { display: flex; border-bottom: 1px solid #1e2434; }
   .stat { flex: 1; padding: 8px 2px 7px; text-align: center; border-right: 1px solid #1e2434; }
   .stat:last-child { border-right: none; }
@@ -422,6 +432,7 @@
       </span>
     </div>
     <div class="t" id="ptext">Overview — 点击任意模块</div>
+    <button id="panel-toggle" class="panel-toggle" type="button" aria-label="Toggle inspection panel">3D only</button>
     <div id="plain-line"></div>
     <div id="prov-line"></div>
     <div id="pdetail"></div>
@@ -452,6 +463,11 @@
     <button data-nav="explore" data-zh="探索" data-en="Explore">探索</button>
     <button data-nav="verify" data-zh="验证" data-en="Verify">验证</button>
     <button data-nav="experiment" data-zh="实验" data-en="Experiment">实验</button>
+  </div>
+  <div id="layer-focus">
+    <button data-focus="all" data-zh="全塔" data-en="All">全塔</button>
+    <button data-focus="encoder" data-zh="Encoder 20" data-en="Encoder 20">Encoder 20</button>
+    <button data-focus="decoder" data-zh="Decoder 20" data-en="Decoder 20">Decoder 20</button>
   </div>
   <div id="ctx-wrap">
     <div id="ctx-head"><span data-zh="KV 成本计算器(4K → 1M)" data-en="KV cost calculator (4K → 1M)">KV 成本计算器(4K → 1M)</span><i id="ctx-caret">▾</i></div>
@@ -896,11 +912,10 @@ try {
     + '</div>';
   throw e;
 }
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = false;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setSize(wrap.clientWidth, wrap.clientHeight);
-// ≥1.5× supersampling: on 1× displays plain MSAA still leaves visible stair-steps
-renderer.setPixelRatio(Math.min(Math.max(devicePixelRatio, 1.5), 2));
+renderer.setPixelRatio(1);
 wrap.appendChild(renderer.domElement);
 
 // Bloom composer — render into a 4× MSAA target, otherwise the offscreen pass
@@ -1643,6 +1658,10 @@ function setHighlight() {
     // prefill phase: decoder global-attention layers are not computed (CED §2.2)
     if (phase === 'prefill' && m.userData.decoder && m.userData.concept === 'sparse') {
       tOp = Math.min(tOp, 0.3); outline = false;
+    }
+    if (focusMode !== 'all' && m.userData.kind) {
+      const inGroup = focusMode === 'encoder' ? !m.userData.decoder : !!m.userData.decoder;
+      if (!inGroup) { tOp = Math.min(tOp, 0.16); outline = false; }
     }
     m.userData.tOp = tOp; m.userData.tEm = tEm;
     if (o) o.visible = outline;
@@ -2517,6 +2536,23 @@ function setExperience(x) {
   if (x === 'beginner') startLearn(); else stopLearn();
   try { localStorage.setItem('dsv41-experience', x); } catch {}
 }
+let focusMode = 'all';
+document.querySelector('[data-focus="all"]')?.classList.add('on');
+function setFocusMode(next) {
+  focusMode = next;
+  document.querySelectorAll('[data-focus]').forEach(b => b.classList.toggle('on', b.dataset.focus === next));
+  setHighlight();
+  if (next === 'all') { flyTo(HOME_POS, HOME_TGT); return; }
+  const group = rightUnits.filter(m => m.userData.kind && (next === 'encoder' ? !m.userData.decoder : !!m.userData.decoder));
+  if (group.length) {
+    const box = new THREE.Box3(); group.forEach(m => box.expandByObject(m));
+    const c = box.getCenter(new THREE.Vector3());
+    const size = Math.max(box.getSize(new THREE.Vector3()).length(), 8);
+    const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+    flyTo(c.clone().add(dir.multiplyScalar(Math.max(size * 2.5, 32))), c);
+  }
+}
+document.querySelectorAll('[data-focus]').forEach(b => b.addEventListener('click', () => setFocusMode(b.dataset.focus)));
 document.querySelectorAll('[data-exp]').forEach(b => b.addEventListener('click', () => setExperience(b.dataset.exp)));
 document.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => {
   const n = b.dataset.nav;
@@ -2770,7 +2806,6 @@ function updateCtx() {
   document.getElementById('ctx-note').textContent = lang === 'zh'
     ? '条长 = 各自 1M 成本的占比;890 B/token 仅指 global KV(不含 SWA 常数项与权重,单请求口径)'
     : 'bar = share of that model\'s own 1M cost; 890 B/token = global KV only (excl. bounded SWA & weights, per request)';
-  document.getElementById('btag-left').textContent = lang === 'zh' ? '2017 朴素 KV' : '2017 naive KV';
   document.getElementById('btag-right').textContent = 'V4.1 FP4 KV';
   document.querySelector('#ctx-row .lbl').textContent = lang === 'zh' ? '上下文' : 'Context';
 }
@@ -2780,7 +2815,9 @@ document.getElementById('ctx-head').addEventListener('click', () => {
 });
 
 // render quality toggle (bloom + shadows on/off, for weak GPUs)
-let quality = 'high';
+let quality = 'low';
+renderer.shadowMap.enabled = false;
+renderer.setPixelRatio(1);
 function setQualityBtn() {
   const b = document.querySelector('#view-btns button[data-view="quality"]');
   if (!b) return;
@@ -2842,6 +2879,23 @@ document.querySelectorAll('#view-btns button').forEach(b => b.addEventListener('
     syncHash();
   }
 }));
+const panelToggle = document.getElementById('panel-toggle');
+const resizeScene = () => {
+  camera.aspect = wrap.clientWidth / wrap.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  composer.setSize(wrap.clientWidth, wrap.clientHeight);
+};
+panelToggle.addEventListener('click', () => {
+  const only = document.body.classList.toggle('canvas-only');
+  panelToggle.textContent = only ? 'Panel' : '3D only';
+  panelToggle.setAttribute('aria-label', only ? 'Show inspection panel' : 'Hide inspection panel');
+  requestAnimationFrame(() => {
+    resizeScene();
+    renderer.setPixelRatio(quality === 'high' ? Math.min(Math.max(devicePixelRatio, 1.5), 2) : 1);
+  });
+  setTimeout(resizeScene, 260);
+});
 
 addEventListener('pointermove', (e) => {
   if (e.target instanceof Element && e.target.closest('#panel, #legend, #view-btns, #tooltip')) return;
@@ -3091,6 +3145,7 @@ window.__opac = () => {
 /* ---------- animate: rAF when visible, timer backstop when throttled ---------- */
 const clock = new THREE.Clock();
 let lastStep = 0;
+let labelFrame = 0;
 function step() {
   lastStep = performance.now();
  try {
@@ -3181,8 +3236,8 @@ function step() {
     }
   }
   // fps readout (also exposed as window.__fps())
-  _fpsN++;
   const nowMs = performance.now();
+  _fpsN++;
   if (nowMs - _fpsT > 600) {
     _fps = (_fpsN * 1000) / (nowMs - _fpsT);
     _fpsN = 0; _fpsT = nowMs;
@@ -3192,18 +3247,21 @@ function step() {
   updateDynamic();
   updateRelLines();
   // labels: follow anchors, distance fade, highlight dim
-  const backFade = THREE.MathUtils.clamp((camera.position.z + 12) / 10, 0, 1); // fade labels when orbiting behind
-  for (const s of labelSprites) {
-    if (s.userData.follow) s.position.copy(s.userData.follow.position).add(s.userData.off);
-    const dist = camera.position.distanceTo(s.position);
-    const k = dist / 60; // reference distance: labels keep constant on-screen size
-    if (s.userData.follow) s.position.x += s.userData.alignDX * k;
-    s.scale.set(s.userData.baseW * k, s.userData.baseH * k, 1);
-    const fade = THREE.MathUtils.clamp((dist - 9) / 7, 0, 1);
-    s.material.opacity = fade * backFade * s.userData.hlOp
-      * (s.userData.hideable && mode !== 'layer' ? 0 : 1)
-      * (s.userData.phaseOnly ? (phase === 'prefill' ? 1 : 0) : 1);
-    s.visible = s.material.opacity > 0.02;
+  labelFrame = (labelFrame + 1) & 1;
+  if (labelFrame === 0 || camAnim) {
+    const backFade = THREE.MathUtils.clamp((camera.position.z + 12) / 10, 0, 1);
+    for (const s of labelSprites) {
+      if (s.userData.follow) s.position.copy(s.userData.follow.position).add(s.userData.off);
+      const dist = camera.position.distanceTo(s.position);
+      const k = dist / 60;
+      if (s.userData.follow) s.position.x += s.userData.alignDX * k;
+      s.scale.set(s.userData.baseW * k, s.userData.baseH * k, 1);
+      const fade = THREE.MathUtils.clamp((dist - 9) / 7, 0, 1);
+      s.material.opacity = fade * backFade * s.userData.hlOp
+        * (s.userData.hideable && (mode !== 'layer' || focusMode === 'all') ? 0 : 1)
+        * (s.userData.phaseOnly ? (phase === 'prefill' ? 1 : 0) : 1);
+      s.visible = s.material.opacity > 0.02;
+    }
   }
   controls.update();
   if (!SMOKE) {
