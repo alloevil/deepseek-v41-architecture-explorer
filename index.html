@@ -75,6 +75,13 @@
   #compare-callouts .cc { flex: 1; padding: 5px 6px; border-radius: 4px; font-size: 9px; line-height: 1.35; }
   #compare-callouts .dense { color: #b7c9ff; background: rgba(79,124,255,0.12); border-left: 2px solid #4f7cff; }
   #compare-callouts .sparse { color: #ffd3a6; background: rgba(255,141,92,0.12); border-left: 2px solid #ff8d5c; }
+  #chapter-nav { display: flex; gap: 4px; padding: 6px 12px; border-bottom: 1px solid #1e2434; }
+  #chapter-nav button.chapter { flex: 1; font-size: 10px; padding: 5px 4px; border-radius: 4px; cursor: pointer; background: transparent; color: #8d98ad; border: 1px solid #2c3548; }
+  #chapter-nav button.chapter.active { background: rgba(47,143,208,0.2); color: #cfe4f8; border-color: #2f8fd0; }
+  #chapter-card { margin: 8px 12px; padding: 8px 9px; border: 1px solid #2c3548; border-left: 3px solid #6ea8ff; border-radius: 5px; background: rgba(30,38,54,0.5); color: #b9c2d4; font-size: 10.5px; line-height: 1.5; }
+  #chapter-card b { color: #e8ecf4; }
+  #chapter-card small { display: block; margin-top: 4px; color: #69768d; }
+  .chapter-walk { margin: 0 12px 8px; width: calc(100% - 24px); padding: 5px; border: 1px solid #2c3548; border-radius: 4px; background: rgba(79,124,255,0.12); color: #a8c8ff; font-size: 10px; cursor: pointer; }
   #experience { display: flex; gap: 4px; margin-top: 7px; }
   #experience button, #view-nav button { font-size: 10px; padding: 3px 8px; border-radius: 4px; cursor: pointer;
     background: transparent; color: #8d98ad; border: 1px solid #2c3548; }
@@ -476,6 +483,14 @@
     <button data-focus="all" data-zh="全塔" data-en="All">全塔</button>
     <button data-focus="encoder" data-zh="Encoder 20" data-en="Encoder 20">Encoder 20</button>
     <button data-focus="decoder" data-zh="Decoder 20" data-en="Decoder 20">Decoder 20</button>
+  <div id="chapter-nav" role="tablist" aria-label="Architecture chapters">
+    <button class="chapter active" data-chapter="overview" data-zh="总览" data-en="Overview">总览</button>
+    <button class="chapter" data-chapter="attention" data-zh="注意力" data-en="Attention">注意力</button>
+    <button class="chapter" data-chapter="kvcache" data-zh="KV 缓存" data-en="KV Cache">KV 缓存</button>
+    <button class="chapter" data-chapter="moe" data-zh="MoE" data-en="MoE">MoE</button>
+  </div>
+  <div id="chapter-card" aria-live="polite"></div>
+  <button id="chapter-walk" class="chapter-walk" type="button" data-zh="▶ 跟随 token" data-en="▶ Follow token">▶ 跟随 token</button>
   </div>
   <div id="ctx-wrap">
     <div id="ctx-head"><span data-zh="KV 成本计算器(4K → 1M)" data-en="KV cost calculator (4K → 1M)">KV 成本计算器(4K → 1M)</span><i id="ctx-caret">▾</i></div>
@@ -1669,6 +1684,12 @@ function setHighlight() {
     if (phase === 'prefill' && m.userData.decoder && m.userData.concept === 'sparse') {
       tOp = Math.min(tOp, 0.3); outline = false;
     }
+    if (chapter !== 'overview') {
+      const chapterConcept = chapter === 'attention' ? (m.userData.concept === 'attention' || m.userData.concept === 'sparse')
+        : chapter === 'kvcache' ? (m.userData.concept === 'kvcache' || m.userData.concept === 'memory')
+        : (m.userData.concept === 'ffn');
+      if (!chapterConcept) { tOp = Math.min(tOp, 0.28); tEm = Math.min(tEm, 0.2); outline = false; }
+    }
     if (focusMode !== 'all' && m.userData.kind) {
       const inGroup = focusMode === 'encoder' ? !m.userData.decoder : !!m.userData.decoder;
       if (!inGroup) { tOp = Math.min(tOp, 0.16); outline = false; }
@@ -2563,6 +2584,25 @@ function setFocusMode(next) {
   }
 }
 document.querySelectorAll('[data-focus]').forEach(b => b.addEventListener('click', () => setFocusMode(b.dataset.focus)));
+let chapter = 'overview';
+const CHAPTERS = {
+  overview: { zh: '<b>总览</b>：左侧是全量注意力的 2017 Transformer；右侧是用稀疏读取、KV 复用和 MoE 扩展的 V4.1。', en: '<b>Overview</b>: the 2017 Transformer uses dense attention; V4.1 adds sparse reads, KV reuse and MoE.', source: '报告架构总览；页面结构为示意' },
+  attention: { zh: '<b>注意力</b>：左塔每个层都看全上下文；右塔用 SWA 处理近处，用 CSA2 索引后读取 Top-512。', en: '<b>Attention</b>: the baseline reads the full context; V4.1 uses SWA locally and CSA2 Top-512 globally.', source: '报告 §2.3；Top-512 为报告数字' },
+  kvcache: { zh: '<b>KV 缓存</b>：左塔按层保存 K/V；右塔由 Full 层写入，Reuse 层跨层借用，并使用 FP4。', en: '<b>KV cache</b>: the baseline stores K/V per layer; V4.1 writes at Full layers, reuses across layers and uses FP4.', source: '报告 §2.4.4 / §3.2.2；890 B/token 为报告数字' },
+  moe: { zh: '<b>MoE</b>：右塔每层包含路由专家和共享专家；主图只画一层专家阵列，作为可读的示意。', en: '<b>MoE</b>: each V4.1 layer contains routed and shared experts; one expert field is drawn as a readable schematic.', source: '报告 MoE 配置；专家阵列为示意' }
+};
+function setChapter(next) {
+  chapter = next;
+  document.querySelectorAll('[data-chapter]').forEach(b => b.classList.toggle('active', b.dataset.chapter === next));
+  const d = CHAPTERS[next], L = lang === 'zh';
+  document.getElementById('chapter-card').innerHTML = `${L ? d.zh : d.en}<small>${d.source}</small>`;
+  setHighlight();
+  if (next === 'attention') selectConcept('attention');
+  else if (next === 'kvcache') selectConcept('kvcache');
+  else if (next === 'moe') selectConcept('ffn');
+  else { selectedConcept = null; hoverConcept = null; setHighlight(); fillOverview(); buildChips(); }
+}
+document.querySelectorAll('[data-chapter]').forEach(b => b.addEventListener('click', () => setChapter(b.dataset.chapter)));
 document.querySelectorAll('[data-exp]').forEach(b => b.addEventListener('click', () => setExperience(b.dataset.exp)));
 document.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => {
   const n = b.dataset.nav;
@@ -2760,6 +2800,9 @@ function buildChips() {
     pnav.appendChild(chip);
   }
 }
+setChapter('overview');
+const chapterWalk = document.getElementById('chapter-walk');
+chapterWalk.addEventListener('click', () => { stopTour(); walkTimer ? stopWalk() : startWalk(); });
 function setLang(l) {
   lang = l;
   document.querySelectorAll('.lbtn').forEach(b => b.classList.toggle('active', b.dataset.lang === l));
