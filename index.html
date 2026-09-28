@@ -82,6 +82,10 @@
   #chapter-card b { color: #e8ecf4; }
   #chapter-card small { display: block; margin-top: 4px; color: #69768d; }
   .chapter-walk { margin: 0 12px 8px; width: calc(100% - 24px); padding: 5px; border: 1px solid #2c3548; border-radius: 4px; background: rgba(79,124,255,0.12); color: #a8c8ff; font-size: 10px; cursor: pointer; }
+  .chapter-step { margin-top: 6px; color: #8fb4ff; font-size: 10px; }
+  .chapter-controls { display: flex; gap: 5px; margin-top: 7px; }
+  .chapter-controls button { flex: 1; padding: 4px; border: 1px solid #2c3548; border-radius: 4px; background: rgba(30,38,54,0.7); color: #b9c2d4; cursor: pointer; font-size: 10px; }
+  .chapter-controls button:hover { color: #fff; border-color: #5a6f9e; }
   .tools-toggle { margin-top: 7px; width: 100%; padding: 5px 8px; border-radius: 5px; cursor: pointer; font-size: 10px; background: rgba(30,38,54,0.55); color: #9aa6bb; border: 1px solid #2c3548; }
   .tools-toggle:hover { color: #e8ecf4; border-color: #5a6f9e; }
   body.guided #experience,
@@ -181,8 +185,8 @@
   #walk-cap .tmhc span { font-size: 9.5px; color: #7d8aa0; font-variant-numeric: tabular-nums; }
   #walk-cap .tmhc i { display: inline-block; width: 22px; height: 4px; border-radius: 2px;
     background: #18b8c8; margin-right: 3px; vertical-align: middle; }
-  #pdetail { font-size: 10.5px; color: #8d98ad; margin-top: 5px; line-height: 1.55; display: none; }
-  #pdetail b { color: #c8d2e4; }
+  #pdetail { margin-top: 7px; padding: 8px; border: 1px solid #2c3548; border-left: 3px solid #b48cff; border-radius: 5px; background: rgba(30,38,54,0.7); font-size: 10.5px; color: #b9c2d4; line-height: 1.55; }
+  #pdetail b { color: #f0f3f9; }
   #plain-line { font-size: 11.5px; color: #9fb3d1; line-height: 1.6; margin-top: 6px; }
   #plain-line b { color: #cfe0f8; }
   #prov-line { margin-top: 7px; line-height: 1.9; }
@@ -515,7 +519,12 @@
     <button class="chapter" data-chapter="moe" data-zh="MoE" data-en="MoE">MoE</button>
   </div>
   <div id="chapter-card" aria-live="polite"></div>
-  <button id="chapter-walk" class="chapter-walk" type="button" data-zh="▶ 跟随 token" data-en="▶ Follow token">▶ 跟随 token</button>
+  <div id="chapter-step" class="chapter-step"></div>
+  <div class="chapter-controls">
+    <button id="chapter-prev" type="button" data-zh="上一步" data-en="Back">上一步</button>
+    <button id="chapter-play" type="button" data-zh="播放本章" data-en="Play chapter">播放本章</button>
+    <button id="chapter-next" type="button" data-zh="下一步" data-en="Next">下一步</button>
+  </div>
   <div id="ctx-wrap" class="collapsed">
     <div id="ctx-head"><span data-zh="KV 成本计算器(4K → 1M)" data-en="KV cost calculator (4K → 1M)">KV 成本计算器(4K → 1M)</span><i id="ctx-caret">▾</i></div>
     <div id="ctx-body">
@@ -2617,6 +2626,8 @@ function setChapter(next) {
   chapter = next;
   document.querySelectorAll('[data-chapter]').forEach(b => b.classList.toggle('active', b.dataset.chapter === next));
   const d = CHAPTERS[next], L = lang === 'zh';
+  chapterSteps = []; chapterStepIndex = -1;
+  document.getElementById('chapter-step').textContent = lang === 'zh' ? '选择章节，然后按下一步逐层查看' : 'Choose a chapter, then step through it';
   document.getElementById('chapter-card').innerHTML = `${L ? d.zh : d.en}<small>${d.source}</small>`;
   setHighlight();
   if (next === 'attention') selectConcept('attention');
@@ -2643,6 +2654,30 @@ function playChapter() {
   };
   run(); walkTimer = setInterval(run, 1500); setWalkBtn(true);
 }
+let chapterSteps = [], chapterStepIndex = -1;
+function refreshChapterStep() {
+  const step = document.getElementById('chapter-step');
+  if (!chapterSteps.length || chapterStepIndex < 0) { step.textContent = lang === 'zh' ? '选择章节，然后按下一步逐层查看' : 'Choose a chapter, then step through it'; return; }
+  const s = chapterSteps[chapterStepIndex];
+  step.textContent = `${chapterStepIndex + 1}/${chapterSteps.length} · ${lang === 'zh' ? s.zh : s.en}`;
+}
+function buildChapterSteps() {
+  const wanted = chapter === 'attention' ? new Set(['attention', 'sparse']) : chapter === 'kvcache' ? new Set(['kvcache', 'memory']) : chapter === 'moe' ? new Set(['ffn']) : null;
+  chapterSteps = wanted ? WALK_STEPS.filter(s => s.targets.some(m => wanted.has(m.userData.concept))) : WALK_STEPS.slice(0, 4);
+  chapterStepIndex = -1; walkTargets = null; setHighlight(); refreshChapterStep();
+}
+function showChapterStep(index) {
+  if (!chapterSteps.length) buildChapterSteps();
+  chapterStepIndex = Math.max(0, Math.min(index, chapterSteps.length - 1));
+  const s = chapterSteps[chapterStepIndex];
+  walkTargets = new Set(s.targets); setHighlight(); startFlow(null, s.targets[0]);
+  const cap = document.getElementById('walk-cap'); cap.style.display = 'block';
+  cap.innerHTML = `<b>${chapterStepIndex + 1}/${chapterSteps.length}</b>${lang === 'zh' ? s.zh : s.en}<span class="wstop">${lang === 'zh' ? 'Esc 停止' : 'Esc to stop'}</span>`;
+  refreshChapterStep();
+}
+document.getElementById('chapter-prev')?.addEventListener('click', () => showChapterStep(chapterStepIndex - 1));
+document.getElementById('chapter-next')?.addEventListener('click', () => showChapterStep(chapterStepIndex + 1));
+document.getElementById('chapter-play')?.addEventListener('click', () => { if (walkTimer) stopWalk(); else playChapter(); });
 document.querySelectorAll('[data-chapter]').forEach(b => b.addEventListener('click', () => setChapter(b.dataset.chapter)));
 document.querySelectorAll('[data-exp]').forEach(b => b.addEventListener('click', () => setExperience(b.dataset.exp)));
 document.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => {
@@ -2843,10 +2878,10 @@ function buildChips() {
 }
 setChapter('overview');
 const chapterWalk = document.getElementById('chapter-walk');
-chapterWalk.addEventListener('click', playChapter);
+if (chapterWalk) chapterWalk.addEventListener('click', playChapter);
 const toolsToggle = document.getElementById('tools-toggle');
 document.body.classList.add('guided');
-toolsToggle.addEventListener('click', () => {
+if (toolsToggle) toolsToggle.addEventListener('click', () => {
   const guided = document.body.classList.toggle('guided');
   toolsToggle.textContent = guided ? (lang === 'zh' ? '更多工具' : 'More tools') : (lang === 'zh' ? '收起工具' : 'Hide tools');
   toolsToggle.setAttribute('aria-expanded', String(!guided));
